@@ -1,0 +1,3 @@
+[submodule "external/pagedown"]
+	path = external/pagedown
+	url = git@github.com:VariantXYZ/pagedown.git
