@@ -15,7 +15,7 @@ div.left-align {
     height: auto;
     position: relative;
 }
-div.sidebar {
+span.sidebar {
     border: dotted;
     position: absolute;
     top: auto;
@@ -24,4 +24,9 @@ div.sidebar {
 </style>
 <div class="holder">
 <div class="left-align">
-<div class="sidebar">RIGHT SIDEBAR</div>
+<span class="sidebar">
+Right Sidebar
+[Home](./posts/index.md.html)
+[Tags](./posts/tags.md.html)
+[Latest](./posts/latest.html)
+</span>
