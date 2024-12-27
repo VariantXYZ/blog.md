@@ -13,7 +13,7 @@ HEADER_HTML = $(INT_DIR)/$(POSTS_DIR)/header.html
 FOOTER_HTML = $(INT_DIR)/$(POSTS_DIR)/footer.html
 
 # Outputs
-PUBLISHED_POSTS := $(foreach POST,$(POSTS),$(PUBLISH_DIR)/$(POST).html)
+PUBLISHED_POSTS := $(foreach POST,$(POSTS),$(PUBLISH_DIR)/$(word 3, $(subst /, ,$(dir $(POST)))).html)
 TAGS_HTML := $(PUBLISH_DIR)/tags.html
 
 .PHONY: site clean
@@ -34,6 +34,12 @@ $(INT_DIR)/%.html: $(INT_DIR)/%.md
 	mkdir -p $(@D)
 	qjs -I '$(BASE)/external/pagedown/Markdown.Converter.js' -e "var text=String.raw\`$(shell awk '{ printf "%s\\n", $$0 }' $<)\`;var converter = new Markdown.Converter();console.log(converter.makeHtml(text.replaceAll('\\\\n','\\n')));" > $@
 
+# For posts
+$(INT_DIR)/%.md: $(POSTS_DIR)/%/post.md
+	mkdir -p $(@D)
+	cat $^ > $@
+
+# Special-case header/footer
 $(INT_DIR)/%.md: %.md
 	mkdir -p $(@D)
 	cat $^ > $@
@@ -44,5 +50,5 @@ $(INT_DIR)/tags.md: $(POSTS_DIR)/tags.md $(TAGS)
 	cat $< >> $@
 	rm -rf $(@D)/tag_*.md
 	$(foreach TAGFILE, $(TAGS), $(foreach TAG, $(shell awk '{ gsub(/ /, "_"); print }' $(TAGFILE)), echo "<details><summary>$(TAG)</summary>" > $(@D)/tag_$(TAG).md; ))
-	$(foreach TAGFILE, $(TAGS), $(foreach TAG, $(shell awk '{ gsub(/ /, "_"); print }' $(TAGFILE)), echo "[$(word 2, $(subst _, ,$(word 3, $(subst /, ,$(TAGFILE)))) )]($(subst tags.txt,post.html,$(TAGFILE)))\n" >> $(@D)/tag_$(TAG).md; ))
+	$(foreach TAGFILE, $(TAGS), $(foreach TAG, $(shell awk '{ gsub(/ /, "_"); print }' $(TAGFILE)), echo "[$(word 2, $(subst _, ,$(word 3, $(subst /, ,$(TAGFILE)))) )](./$(word 3, $(subst /, ,$(TAGFILE))).html)\n" >> $(@D)/tag_$(TAG).md; ))
 	awk 'FNR==1 && NR!=1 && !empty {print "</details>"} {if (NF > 0) empty=0} {print} END {if (NR > 0) print "</details>"}' $(@D)/tag_*.md >> $@

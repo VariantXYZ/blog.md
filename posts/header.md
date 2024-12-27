@@ -5,7 +5,6 @@ div.holder {
     display: flex;
     justify-content: space-between;
     margin: 0px;
-    font-size: medium;
 }
 div.left-align {
     margin-left: 0;
@@ -27,7 +26,7 @@ span.sidebar {
 <div class="left-align">
 <span class="sidebar">
 Right Sidebar
-[Home](./posts/index.html)
-[Tags](./posts/tags.html)
-[Latest](./posts/latest.html)
+[Home](./index.html)
+[Tags](./tags.html)
+[Latest](./latest.html)
 </span>
