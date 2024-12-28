@@ -5,6 +5,7 @@ div.holder {
     display: flex;
     justify-content: space-between;
     margin: 0px;
+    font-size: 95%;
 }
 div.left-align {
     margin-left: 0;
