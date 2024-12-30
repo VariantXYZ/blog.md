@@ -13,7 +13,7 @@ HEADER_HTML = $(INT_DIR)/$(POSTS_DIR)/header.html
 FOOTER_HTML = $(INT_DIR)/$(POSTS_DIR)/footer.html
 
 # Outputs
-PUBLISHED_POSTS := $(foreach POST,$(POSTS),$(PUBLISH_DIR)/$(word 3, $(subst /, ,$(dir $(POST)))).html)
+PUBLISHED_POSTS := $(foreach POST,$(POSTS),$(PUBLISH_DIR)/$(word 3, $(subst _, ,$(subst /, ,$(dir $(POST)))) ).html)
 TAGS_HTML := $(PUBLISH_DIR)/tags.html
 
 .PHONY: site clean
@@ -34,10 +34,13 @@ $(INT_DIR)/%.html: $(INT_DIR)/%.md
 	mkdir -p $(@D)
 	qjs -I '$(BASE)/external/pagedown/Markdown.Converter.js' -e "var text=String.raw\`$(shell awk '{ printf "%s\\n", $$0 }' $<)\`;var converter = new Markdown.Converter();console.log(converter.makeHtml(text.replaceAll('\\\\n','\\n')));" > $@
 
-# For posts
-$(INT_DIR)/%.md: $(POSTS_DIR)/%/post.md
+# For posts, we print the post title
+# note that this will concatenate multiple posts with the same number in Make's sorted order (it's consistent within versions of Make, but we don't control the sort spec)
+# Also this means we don't support underscores or forward slashes in titles...
+$(INT_DIR)/%.md: $(POSTS_DIR)/%_*/post.md
 	mkdir -p $(@D)
-	cat $^ > $@
+	echo \# $(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$^)))), $(subst _, ,$(subst /, ,$^))) > $@
+	cat $^ >> $@
 
 # Special-case header/footer
 $(INT_DIR)/%.md: %.md
@@ -50,5 +53,5 @@ $(INT_DIR)/tags.md: $(POSTS_DIR)/tags.md $(TAGS)
 	cat $< >> $@
 	rm -rf $(@D)/tag_*.md
 	$(foreach TAGFILE, $(TAGS), $(foreach TAG, $(shell awk '{ gsub(/ /, "_"); print }' $(TAGFILE)), echo "<details><summary>$(TAG)</summary>" > $(@D)/tag_$(TAG).md; ))
-	$(foreach TAGFILE, $(TAGS), $(foreach TAG, $(shell awk '{ gsub(/ /, "_"); print }' $(TAGFILE)), echo "[$(word 2, $(subst _, ,$(word 3, $(subst /, ,$(TAGFILE)))) )](./$(word 3, $(subst /, ,$(TAGFILE))).html)\n" >> $(@D)/tag_$(TAG).md; ))
+	$(foreach TAGFILE, $(TAGS), $(foreach TAG, $(shell awk '{ gsub(/ /, "_"); print }' $(TAGFILE)), echo "[$(wordlist 4,$(words $(filter-out tags.txt,$(subst _, ,$(subst /, ,$(TAGFILE))))), $(subst _, ,$(subst /, ,$(TAGFILE))))](./$(word 3, $(subst _, ,$(subst /, ,$(TAGFILE)))).html)\n" >> $(@D)/tag_$(TAG).md; ))
 	awk 'FNR==1 && NR!=1 && !empty {print "</details>"} {if (NF > 0) empty=0} {print} END {if (NR > 0) print "</details>"}' $(@D)/tag_*.md >> $@
