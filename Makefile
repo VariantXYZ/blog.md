@@ -1,17 +1,20 @@
 BASE := .
 POSTS_DIR := $(BASE)/posts
+RESOURCES_DIR := $(BASE)/resources
 OUT_DIR := $(BASE)/output
 INT_DIR := $(OUT_DIR)/intermediates
 PUBLISH_DIR := $(OUT_DIR)/publish
 
 POSTS := $(basename $(wildcard $(POSTS_DIR)/**/post.md))
 TAGS := $(wildcard $(POSTS_DIR)/**/tags.txt)
+RESOURCES := $(wildcard $(RESOURCES_DIR)/*)
 HEADER_HTML := $(INT_DIR)/$(POSTS_DIR)/header.html
 FOOTER_HTML := $(INT_DIR)/$(POSTS_DIR)/footer.html
 POST_NUMBERS := $(foreach POST,$(POSTS),$(word 3, $(subst _, ,$(subst /, ,$(dir $(POST))))))
 
 # Outputs
 PUBLISHED_POSTS := $(foreach POST_NUMBER,$(POST_NUMBERS),$(PUBLISH_DIR)/$(POST_NUMBER).html)
+PUBLISHED_RESOURCES := $(foreach RESOURCE,$(RESOURCES),$(PUBLISH_DIR)/$(notdir $(RESOURCE)))
 TAGS_HTML := $(PUBLISH_DIR)/tags.html
 LATEST_HTML := $(PUBLISH_DIR)/latest.html
 INDEX_HTML := $(PUBLISH_DIR)/index.html
@@ -24,7 +27,7 @@ ESCAPE_STRING = $(subst !,\!,$(subst ?,\?,$(subst $(space),\$(space),$(subst $(q
 ESCAPE_QUOTES = $(subst $(quote),\$(quote),$(1))
 
 .PHONY: site clean new
-site: $(PUBLISHED_POSTS) $(TAGS_HTML) $(LATEST_HTML) $(INDEX_HTML)
+site: $(PUBLISHED_POSTS) $(PUBLISHED_RESOURCES) $(TAGS_HTML) $(LATEST_HTML) $(INDEX_HTML)
 	if [ "$(CNAME)" != "" ];\
 	then printf "$(CNAME)" > $(PUBLISH_DIR)/CNAME;\
 	fi;
@@ -83,6 +86,11 @@ $(INT_DIR)/%.md: $(POSTS_DIR)/%_*/post.md $(POSTS_DIR)/%_*/timestamp
 	if [ "$$NEXT_POST" != "" ];\
 		then printf "[Next Post >>]($$NEXT_POST)" >> $@;\
 	fi;
+
+# Resources
+$(PUBLISH_DIR)/%: $(RESOURCES_DIR)/%
+	mkdir -p $(@D)
+	cp $< $@
 
 # Special-case header/footer
 $(INT_DIR)/%.md: %.md
