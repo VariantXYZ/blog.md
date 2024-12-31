@@ -1,4 +1,6 @@
-It's your boy Variant. 
+<head><title>Variant's uninteractive web experience</title></head>
+
+It's your boy, Variant. 
 
 I've done horrible things with Make and JSC to create this static blog, just for you.
 
