@@ -1,12 +1,12 @@
-<head><title>Index</title></head>
+It's your boy Variant. 
 
-This is the index. 
+I've done horrible things with Make and JSC to create this static blog, just for you.
 
-The root!
+I'm figuring out how to do horrible things with CSS next, so stay tuned.
 
-Posts can be referenced by their 5 digit IDs.
+# Links
 
-For example:
-
-* [00000](00000.html)
-* [00001](00001.html)
+* [Hello World!](00001.html)
+* [GitHub (personal)](https://github.com/VariantXYZ)
+* [Cash Medal Chameleon (Medabots translations)](https://medabots.github.io)
+* [This site](https://github.com/VariantXYZ/blog.md)

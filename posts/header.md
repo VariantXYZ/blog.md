@@ -1,4 +1,4 @@
-# HEADER
+# Variant's web experience
 
 <style>
 div.holder {
@@ -29,7 +29,7 @@ div.holder code {
 <div class="holder">
 <div class="left-align">
 <span class="sidebar">
-Right Sidebar
+Nav
 [Home](./index.html)
 [Tags](./tags.html)
 [Latest](./latest.html)
