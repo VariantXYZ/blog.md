@@ -2,4 +2,4 @@
 </div>
 </div>
 
-# FOOTER
+# The rights are conserved

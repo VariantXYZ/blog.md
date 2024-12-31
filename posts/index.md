@@ -1,10 +1,12 @@
-This is the index. 
+It's your boy Variant. 
 
-The root!
+I've done horrible things with Make and JSC to create this static blog, just for you.
 
-Posts can be referenced by their 5 digit IDs.
+I'm figuring out how to do horrible things with CSS next, so stay tuned.
 
-For example:
+# Links
 
-* [00000](00000.html)
-* [00001](00001.html)
+* [Hello World!](00001.html)
+* [GitHub (personal)](https://github.com/VariantXYZ)
+* [Cash Medal Chameleon (Medabots translations)](https://medabots.github.io)
+* [This site](https://github.com/VariantXYZ/blog.md)
