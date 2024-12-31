@@ -13,6 +13,7 @@ FOOTER_HTML = $(INT_DIR)/$(POSTS_DIR)/footer.html
 PUBLISHED_POSTS := $(foreach POST,$(POSTS),$(PUBLISH_DIR)/$(word 3, $(subst _, ,$(subst /, ,$(dir $(POST))))).html)
 TAGS_HTML := $(PUBLISH_DIR)/tags.html
 LATEST_HTML := $(PUBLISH_DIR)/latest.html
+INDEX_HTML := $(PUBLISH_DIR)/index.html
 
 # Helpers
 empty =
@@ -22,7 +23,7 @@ ESCAPE_STRING = $(subst ?,\?,$(subst $(space),\$(space),$(subst $(quote),\$(quot
 ESCAPE_STRING2 = $(subst $(quote),\$(quote),$(1))
 
 .PHONY: site clean
-site: $(PUBLISHED_POSTS) $(TAGS_HTML) $(LATEST_HTML)
+site: $(PUBLISHED_POSTS) $(TAGS_HTML) $(LATEST_HTML) $(INDEX_HTML)
 
 clean:
 	rm -rf $(OUT_DIR)
@@ -68,6 +69,11 @@ $(INT_DIR)/%.md: $(POSTS_DIR)/%_*/post.md
 $(INT_DIR)/%.md: %.md
 	mkdir -p $(@D)
 	cat $^ > $@
+
+# Fallback, catches index
+$(INT_DIR)/%.md: $(POSTS_DIR)/%.md
+	mkdir -p $(@D)
+	cp $^ $@
 
 # (post/.../tags.txt) -> output/intermediate/tags.md
 $(INT_DIR)/tags.md: $(POSTS_DIR)/tags.md $(TAGS)
