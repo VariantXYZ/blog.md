@@ -23,7 +23,8 @@ INDEX_HTML := $(PUBLISH_DIR)/index.html
 empty =
 space = $(empty) $(empty)
 quote = "
-ESCAPE_STRING = $(subst !,\!,$(subst ?,\?,$(subst $(space),\$(space),$(subst $(quote),\$(quote),$(1)))))
+comma = ,
+ESCAPE_STRING = $(subst $(comma),\$(comma),$(subst !,\!,$(subst ?,\?,$(subst $(space),\$(space),$(subst $(quote),\$(quote),$(1))))))
 ESCAPE_QUOTES = $(subst $(quote),\$(quote),$(1))
 
 .PHONY: site clean new
@@ -37,11 +38,11 @@ clean:
 
 # POST_TITLE="New Post Title!"
 new:
-	if [ "$(POST_TITLE)" == "" ] || [ "$(findstring $(space),$(POST_TITLE))" ];\
-	then echo "Set POST_TITLE and make sure it does not have spaces" && exit 1;\
+	if [ "$(POST_TITLE)" == "" ];\
+	then echo "Set POST_TITLE" && exit 1;\
 	fi;
-
-	export NEW_DIRECTORY=$(POSTS_DIR)/$(shell echo '$(lastword $(POST_NUMBERS))' | awk '{ printf "%05d", $$1 + 1 }')_$(call ESCAPE_STRING,$(POST_TITLE));\
+	export POST_TITLE=$(call ESCAPE_STRING,$(subst $(space),_,$(POST_TITLE)));\
+	export NEW_DIRECTORY=$(POSTS_DIR)/$(shell echo '$(lastword $(POST_NUMBERS))' | awk '{ printf "%05d", $$1 + 1 }')_$$POST_TITLE;\
 	mkdir -p "$$NEW_DIRECTORY";\
 	touch "$$NEW_DIRECTORY/post.md" "$$NEW_DIRECTORY/tags.txt";\
 	date +"%Y-%m-%d" | tr -d '\n' > "$$NEW_DIRECTORY/timestamp";\
