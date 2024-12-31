@@ -6,11 +6,12 @@ PUBLISH_DIR := $(OUT_DIR)/publish
 
 POSTS := $(basename $(wildcard $(POSTS_DIR)/**/post.md))
 TAGS := $(wildcard $(POSTS_DIR)/**/tags.txt)
-HEADER_HTML = $(INT_DIR)/$(POSTS_DIR)/header.html
-FOOTER_HTML = $(INT_DIR)/$(POSTS_DIR)/footer.html
+HEADER_HTML := $(INT_DIR)/$(POSTS_DIR)/header.html
+FOOTER_HTML := $(INT_DIR)/$(POSTS_DIR)/footer.html
+POST_NUMBERS := $(foreach POST,$(POSTS),$(word 3, $(subst _, ,$(subst /, ,$(dir $(POST))))))
 
 # Outputs
-PUBLISHED_POSTS := $(foreach POST,$(POSTS),$(PUBLISH_DIR)/$(word 3, $(subst _, ,$(subst /, ,$(dir $(POST))))).html)
+PUBLISHED_POSTS := $(foreach POST_NUMBER,$(POST_NUMBERS),$(PUBLISH_DIR)/$(POST_NUMBER).html)
 TAGS_HTML := $(PUBLISH_DIR)/tags.html
 LATEST_HTML := $(PUBLISH_DIR)/latest.html
 INDEX_HTML := $(PUBLISH_DIR)/index.html
@@ -19,14 +20,25 @@ INDEX_HTML := $(PUBLISH_DIR)/index.html
 empty =
 space = $(empty) $(empty)
 quote = "
-ESCAPE_STRING = $(subst ?,\?,$(subst $(space),\$(space),$(subst $(quote),\$(quote),$(1))))
+ESCAPE_STRING = $(subst !,\!,$(subst ?,\?,$(subst $(space),\$(space),$(subst $(quote),\$(quote),$(1)))))
 ESCAPE_QUOTES = $(subst $(quote),\$(quote),$(1))
 
-.PHONY: site clean
+.PHONY: site clean new
 site: $(PUBLISHED_POSTS) $(TAGS_HTML) $(LATEST_HTML) $(INDEX_HTML)
 
 clean:
 	rm -rf $(OUT_DIR)
+
+# POST_TITLE="New Post Title!"
+new:
+	if [ "$(POST_TITLE)" == "" ] || [ "$(findstring $(space),$(POST_TITLE))" ];\
+	then echo "Set POST_TITLE and make sure it does not have spaces" && exit 1;\
+	fi;
+
+	export NEW_DIRECTORY=$(POSTS_DIR)/$(shell echo '$(lastword $(POST_NUMBERS))' | awk '{ printf "%05d", $$1 + 1 }')_$(call ESCAPE_STRING,$(POST_TITLE));\
+	mkdir -p "$$NEW_DIRECTORY";\
+	touch "$$NEW_DIRECTORY/post.md" "$$NEW_DIRECTORY/tags.txt";\
+	echo -n `date +"[%m-%d %H:%M:%S]"` > "$$NEW_DIRECTORY/timestamp";\
 
 # Split up the header/footer processing to take advantage of divs, despite markdown not strictly processing them
 # output/intermediates/.../X.html -> output/publish/.../X.html
@@ -48,10 +60,14 @@ $(INT_DIR)/%.html: $(INT_DIR)/%.md
 # For posts, we print the post title and before/after posts
 # note that this will concatenate multiple posts with the same number in Make's sorted order (it's consistent within versions of Make, but we don't control the sort spec)
 # Also this means we don't support underscores or forward slashes in titles since they'll get replaced
-$(INT_DIR)/%.md: $(POSTS_DIR)/%_*/post.md
+$(INT_DIR)/%.md: $(POSTS_DIR)/%_*/post.md $(POSTS_DIR)/%_*/timestamp
 	mkdir -p $(@D)
-	printf "# [$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$^)))), $(subst _, ,$(subst /, ,$^))))]($*.html)\n" > $@
-	cat $(call ESCAPE_STRING,$^) >> $@
+	printf "<sub>Posted on " > $@
+	cat "$(call ESCAPE_QUOTES,$(lastword $^))" >> $@ 
+	printf "</sub>\n" >> $@
+	printf "# [$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))]($*.html)\n" >> $@
+
+	cat "$(call ESCAPE_QUOTES,$<)" >> $@
 	
 	@export PREVIOUS_POST="$(strip $(filter-out $*.html, $(subst $(PUBLISH_DIR)/,,$(shell echo $(PUBLISHED_POSTS) | tr ' ' '\n' | grep -B1 $*.html))))";\
 	export NEXT_POST="$(strip $(filter-out $*.html, $(subst $(PUBLISH_DIR)/,,$(shell echo $(PUBLISHED_POSTS) | tr ' ' '\n' | grep -A1 $*.html))))";\
