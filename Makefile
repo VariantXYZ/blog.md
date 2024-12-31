@@ -71,6 +71,7 @@ $(INT_DIR)/%.md: $(POSTS_DIR)/%_*/post.md $(POSTS_DIR)/%_*/timestamp
 	printf "<sub>Posted on " > $@
 	cat "$(call ESCAPE_QUOTES,$(lastword $^))" >> $@ 
 	printf "</sub>\n" >> $@
+	printf "<head><title>$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))</title><head>\n" >> $@
 	printf "# [$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))]($*.html)\n" >> $@
 
 	cat "$(call ESCAPE_QUOTES,$<)" >> $@

@@ -1,3 +1,5 @@
+<head><title>Index</title></head>
+
 This is the index. 
 
 The root!
