@@ -6,6 +6,7 @@ The added bonus of figuring out what goes into frontend web development is nice 
 
 <details>
 <summary>*Cohost Intro Post*</summary>
+
 I'm known in a few places as Variant, and my hope is that this'll serve as a useful intro pinned post.
 
 I enjoy games, but don't actually have time to play too many of them. I tend to pick up and drop games if they don't grab me, so a lot of the ones I finish tend to be fairly special to me. Sometimes I'll come across a series or game that I really like and want to make better, or at least more palatable to myself, and so I tend to do a lot of reverse engineering projects...
@@ -19,6 +20,7 @@ In past years, I worked on enabling translations for Phantasy Star Online 2 back
 A longer time ago, I actually was really into Ragnarok Online and the super high rate private server scene too. I had administrated more populated servers, but my favorite was definitely the last one I was involved in called RidiculouslyRO. A friend and I worked on it together and I think it was definitely something special. We went balls to the wall with Big Numbers and customization and even implemented solo instancing way before it was mainlined into the server emulator projects at the time...
 
 And that's what I remember.
+
 </details>
 
 ---
