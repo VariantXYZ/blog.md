@@ -10,8 +10,9 @@ HEADER_HTML = $(INT_DIR)/$(POSTS_DIR)/header.html
 FOOTER_HTML = $(INT_DIR)/$(POSTS_DIR)/footer.html
 
 # Outputs
-PUBLISHED_POSTS := $(foreach POST,$(POSTS),$(PUBLISH_DIR)/$(word 3, $(subst _, ,$(subst /, ,$(dir $(POST)))) ).html)
+PUBLISHED_POSTS := $(foreach POST,$(POSTS),$(PUBLISH_DIR)/$(word 3, $(subst _, ,$(subst /, ,$(dir $(POST))))).html)
 TAGS_HTML := $(PUBLISH_DIR)/tags.html
+LATEST_HTML := $(PUBLISH_DIR)/latest.html
 
 # Helpers
 empty =
@@ -21,7 +22,7 @@ ESCAPE_STRING = $(subst ?,\?,$(subst $(space),\$(space),$(subst $(quote),\$(quot
 ESCAPE_STRING2 = $(subst $(quote),\$(quote),$(1))
 
 .PHONY: site clean
-site: $(PUBLISHED_POSTS) $(TAGS_HTML)
+site: $(PUBLISHED_POSTS) $(TAGS_HTML) $(LATEST_HTML)
 
 clean:
 	rm -rf $(OUT_DIR)
@@ -31,6 +32,11 @@ clean:
 $(PUBLISH_DIR)/%.html: $(HEADER_HTML) $(INT_DIR)/%.html $(FOOTER_HTML) 
 	mkdir -p $(@D)
 	cat $^ > $@
+
+# Latest is just going to be the last post, which is ordered, so just copy it
+$(LATEST_HTML): $(lastword $(PUBLISHED_POSTS))
+	mkdir -p $(@D)
+	cp $< $@
 
 # output/intermediates/.../X.md -> output/intermediates/.../X.html
 # This is the key point that converts all our markdown into html
@@ -71,6 +77,5 @@ $(INT_DIR)/tags.md: $(POSTS_DIR)/tags.md $(TAGS)
 	$(foreach TAGFILE, $(TAGS), $(foreach TAG, $(shell awk '{ gsub(/ /, "_"); print }' $(call ESCAPE_STRING,$(TAGFILE))), echo "<details><summary>$(TAG)</summary>" > $(@D)/tag_$(TAG).md; ))
 	$(foreach TAGFILE, $(TAGS), $(foreach TAG, $(shell awk '{ gsub(/ /, "_"); print }' $(call ESCAPE_STRING,$(TAGFILE))), echo "[$(wordlist 4,$(words $(filter-out tags.txt,$(subst _, ,$(subst /, ,$(TAGFILE))))), $(subst _, ,$(subst /, ,$(TAGFILE))))](./$(word 3, $(subst _, ,$(subst /, ,$(TAGFILE)))).html)\n" >> $(@D)/tag_$(TAG).md; ))
 	awk 'FNR==1 && NR!=1 && !empty {print "</details>"} {if (NF > 0) empty=0} {print} END {if (NR > 0) print "</details>"}' $(@D)/tag_*.md >> $@
-
 
 
