@@ -25,6 +25,9 @@ ESCAPE_QUOTES = $(subst $(quote),\$(quote),$(1))
 
 .PHONY: site clean new
 site: $(PUBLISHED_POSTS) $(TAGS_HTML) $(LATEST_HTML) $(INDEX_HTML)
+	if [ "$(CNAME)" != "" ];\
+	then printf "$(CNAME)" > $(PUBLISH_DIR)/CNAME;\
+	fi;
 
 clean:
 	rm -rf $(OUT_DIR)

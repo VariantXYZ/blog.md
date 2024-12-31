@@ -33,7 +33,7 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Make all
         run: |
-          make -j site
+          CNAME=vxyz.me make -j site
       - name: 'Archive Site'
         uses: actions/upload-pages-artifact@v3
         with:
