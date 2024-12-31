@@ -41,7 +41,7 @@ new:
 	export NEW_DIRECTORY=$(POSTS_DIR)/$(shell echo '$(lastword $(POST_NUMBERS))' | awk '{ printf "%05d", $$1 + 1 }')_$(call ESCAPE_STRING,$(POST_TITLE));\
 	mkdir -p "$$NEW_DIRECTORY";\
 	touch "$$NEW_DIRECTORY/post.md" "$$NEW_DIRECTORY/tags.txt";\
-	echo -n `date +"[%m-%d %H:%M:%S]"` > "$$NEW_DIRECTORY/timestamp";\
+	date +"%Y-%m-%d" | tr -d '\n' > "$$NEW_DIRECTORY/timestamp";\
 
 # Split up the header/footer processing to take advantage of divs, despite markdown not strictly processing them
 # output/intermediates/.../X.html -> output/publish/.../X.html
