@@ -15,12 +15,17 @@ div.holder a:hover {
     color: #FF0000;
     text-decoration: underline;
 }
+div.holder img {
+    max-width: 50%;
+    height: auto;
+}
 div.left-align {
     margin-left: 0;
     margin-right: auto;
     margin-top: 0;
     border: dashed;
-    width: 600px;
+    max-width: 800px;
+    width: 90%;
     height: auto;
     position: relative;
     padding-left: 5px;
