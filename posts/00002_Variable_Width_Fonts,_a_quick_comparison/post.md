@@ -4,7 +4,9 @@
 
 # Preface
 
-Over the years, I've done a fair amount of reverse engineering on old games to enable translations from Japanese (I haven't really touched games in other languages, but maybe one day). I think I'm generally rather slow overall, but I do have a process:
+A [recent study](https://www.science.org/doi/10.1126/sciadv.aaw2594) I saw popping up on some social media commented on how information density over time across spoken languages was fairly similar despite vastly different approaches (different syllable counts, general rate of speech, etc...). The obvious criticisms aside (e.g., languages being more or less efficient in specific contexts due to general cultural shifts), it did get me thinking a bit about *written* information density, especially when it comes to displaying things on fairly low-power limited systems (<sub>yes I mean the Gameboy</sub>).
+
+Over the years, I've done a fair amount of reverse engineering on old GB stuff to enable translations from Japanese. I think I'm generally rather slow overall, but I do have a process:
 
 1. Identify what's writing the text out
 	* Text is usually represented as a set of indices into a larger tileset
@@ -15,9 +17,17 @@ Over the years, I've done a fair amount of reverse engineering on old games to e
 	* Sometimes, like with Sakura Wars GB2, the text itself already supports English font so I just reuse it
 4. Extract the text into some common format (usually CSV) and rebuild with it cleanly (text extraction + reinsertion)
 
-Generally after text extraction/insertion, the biggest task to overcome is... how do we actually fit English text in the space originally meant for Japanese text? I'd like to get into more detail about that specific topic... but maybe another time. 
+Generally after text extraction/insertion, the next big task to overcome is... how do we actually fit English text in the space originally meant for Japanese text? ...The answer is usually "it depends" from game to game and I won't bore you with the details (*for now*).
 
-For now, I'd like to note how well Japanese lends itself to both space (the number of pixels consumed on screen for text when it's displayed) and storage (the amount of data used for text in the ROM).
+Instead, with the above context, I'd rather dive in a bit into Japanese text itself and how exactly it compares to the translated English. Japanese text in old games tends to be fairly [space efficient](## "The number of pixels consumed on screen for text when it's displayed") and [storage efficient](## "The amount of data used to store the text in memory itself"). 
+
+# Space Efficiency
+
+# Storage Efficiency
+
+# Information Density (with my sample size of like, 3 games)
+
+When I was looking for translators for Medarot 3, I had also spent time looking into groups that would work on commission. The group I ended up working with for part of the M3 translation, [AoiTenshi](https://aoitenshi.com), gave me an upper-bound cost per English word at approximately 2.5 Japanese Characters per English word. Upper-bound is a keyword though, because it usually was significantly higher than the actual number of English words at the end of the translation.
 
 # Example: Dragon Warrior 3 (GBC, USA English)
 
