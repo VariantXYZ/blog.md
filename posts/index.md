@@ -1,4 +1,4 @@
-<head><title>Variant's uninteractive web experience</title></head>
+<head><meta charset="UTF-8"/><title>Variant's uninteractive web experience</title></head>
 
 It's your boy, Variant. 
 
