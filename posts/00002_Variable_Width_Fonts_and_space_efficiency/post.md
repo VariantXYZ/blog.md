@@ -199,9 +199,13 @@ th.fonts, td.fonts
 
 <sub>(The GIFs are direct 2x scale, so I just split the frames and used those to measure the pixels :D)</sub>
 
-The content of the text is limited by the actual storage availability in both English and Japanese (that is, the character count columns), but as made clear above: if we're willing to draw render English as variable-width, we can fit as much, if not more information within the same visual space! We could go even further with a different font, but I think this is sufficient to illustrate the point.
+# Conclusions
 
-Now if we could just figure out a way to do it in a way that didn't involve needing to draw text dynamically while maintaining the same text storage efficiency... I suppose that's a deep dive for another time.
+It's not quite as apples-to-apples, but English taking 200 characters to convey what Japanese does in 148 is indicative of a larger trend we see that causes a lot of trouble when it comes to the actual storage of English text when memory is limited... This is a storage problem though, and on the topic of visual space: English can do pretty well!
+
+If we're willing to draw render English as variable-width, we can fit as much, if not more information within the same visual space!
+
+Now if we could just figure out a way to do it in a way that didn't involve needing to draw text dynamically while maintaining the same text storage efficiency... I suppose that's a deep dive for another time, or research for someone smarter than me to get into.
 
 # Some final personal notes
 
