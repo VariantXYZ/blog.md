@@ -26,6 +26,7 @@ quote = "
 comma = ,
 ESCAPE_STRING = $(subst $(comma),\$(comma),$(subst !,\!,$(subst ?,\?,$(subst $(space),\$(space),$(subst $(quote),\$(quote),$(1))))))
 ESCAPE_QUOTES = $(subst $(quote),\$(quote),$(1))
+ESCAPE_JSC_RAWSTRING = $(subst $(quote),\$(quote),$(subst `,\$${"\`"},$(1)))
 
 .PHONY: site clean new
 site: $(PUBLISHED_POSTS) $(PUBLISHED_RESOURCES) $(TAGS_HTML) $(LATEST_HTML) $(INDEX_HTML)
@@ -62,7 +63,7 @@ $(LATEST_HTML): $(lastword $(PUBLISHED_POSTS))
 # This is the key point that converts all our markdown into html
 $(INT_DIR)/%.html: $(INT_DIR)/%.md
 	mkdir -p $(@D)
-	qjs -I '$(BASE)/external/pagedown/Markdown.Converter.js' -e "var text=String.raw\`$(call ESCAPE_QUOTES,$(shell awk '{ printf "%s\\n", $$0 }' $<))\`;var converter = new Markdown.Converter();console.log(converter.makeHtml(text.replaceAll('\\\\n','\\n')));" > $@
+	qjs -I '$(BASE)/external/pagedown/Markdown.Converter.js' -e "var text=String.raw\`$(call ESCAPE_JSC_RAWSTRING,$(shell awk '{ printf "%s\\n", $$0 }' $<))\`;var converter = new Markdown.Converter();console.log(converter.makeHtml(text.replaceAll('\\\\n','\\n')));" > $@
 
 # For posts, we print the post title and before/after posts
 # note that this will concatenate multiple posts with the same number in Make's sorted order (it's consistent within versions of Make, but we don't control the sort spec)
