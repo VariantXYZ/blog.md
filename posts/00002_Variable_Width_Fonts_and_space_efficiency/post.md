@@ -21,15 +21,20 @@ Instead, with the above context, I'd rather dive in a bit into Japanese text its
 
 # Space Efficiency in Dragon Warrior 3
 
-Randomly, on Cohost this year, a user [@Bek0ha](http://x.com/Bek0ha) went and found and recreated a [cool font](https://archive.org/details/jimaku-font) that caught my eye:
+Randomly, on Cohost this year, a user [@Bek0ha](http://x.com/Bek0ha) ([bsky](https://bsky.app/profile/bekoha.bsky.social)) went and found and recreated a [cool font](https://archive.org/details/jimaku-font) that caught my eye:
 
 ![K.K. Kinema Font Lab](kinema.png "K.K. Kinema Font Lab - Handwritten Movie Subtitle Font")
 
-Bek0ha went so far as to even provide me an 8x8 version of it:
+Bekoha went so far as to even provide me an 8x8 version of it:
 
-![Kinema 8-bit font](kinema_pixel_2.png)
-
-![Kinema 8-bit font2](kinema_pixel.png)
+<style>
+span.two img
+{
+    max-width: 49%;
+    height: auto;
+}
+</style>
+<span class="two">![Kinema 8-bit font](kinema_pixel.png "Standard Font") ![Kinema 8-bit narrow font](kinema_pixel_2.png "Narrow Font")</span>
 
 Anyway, I figured I'd see how it would look in Dragon Warrior 3, which I had [disassembled](https://github.com/VariantXYZ/dragon-warrior-3-gbc) and gotten text reinsertion working for a while back for a re-localization project.
 
@@ -203,7 +208,7 @@ th.fonts, td.fonts
 
 It's not quite as apples-to-apples, but English taking 200 characters to convey what Japanese does in 148 is indicative of a larger trend we see that causes a lot of trouble when it comes to the actual storage of English text when memory is limited... This is a storage problem though, and on the topic of visual space: English can do pretty well!
 
-If we're willing to draw render English as variable-width, we can fit as much, if not more information within the same visual space!
+If we're willing to render English variable-width text dynamically, we can fit as much, if not more information within the same visual space!
 
 Now if we could just figure out a way to do it in a way that didn't involve needing to draw text dynamically while maintaining the same text storage efficiency... I suppose that's a deep dive for another time, or research for someone smarter than me to get into.
 
