@@ -1,3 +1,7 @@
+BLOG_TITLE := Blog
+BLOG_ROOT_LINK := https://www.example.com
+BLOG_DESCRIPTION := An interactive web experience
+
 BASE := .
 POSTS_DIR := $(BASE)/posts
 RESOURCES_DIR := $(BASE)/resources
@@ -18,6 +22,8 @@ PUBLISHED_RESOURCES := $(foreach RESOURCE,$(RESOURCES),$(PUBLISH_DIR)/$(notdir $
 TAGS_HTML := $(PUBLISH_DIR)/tags.html
 LATEST_HTML := $(PUBLISH_DIR)/latest.html
 INDEX_HTML := $(PUBLISH_DIR)/index.html
+RSS_XML := $(PUBLISH_DIR)/rss.xml
+INTERMEDIATE_RSS_XML := $(foreach POST_NUMBER,$(POST_NUMBERS),$(INT_DIR)/$(POST_NUMBER).xml)
 
 # Helpers
 empty =
@@ -28,8 +34,9 @@ ESCAPE_STRING = $(subst $(comma),\$(comma),$(subst !,\!,$(subst ?,\?,$(subst $(s
 ESCAPE_QUOTES = $(subst $(quote),\$(quote),$(1))
 ESCAPE_JSC_RAWSTRING = $(subst $(quote),\$(quote),$(subst `,\$${"\`"},$(1)))
 
+.SECONDARY:
 .PHONY: site clean new
-site: $(PUBLISHED_POSTS) $(PUBLISHED_RESOURCES) $(TAGS_HTML) $(LATEST_HTML) $(INDEX_HTML)
+site: $(PUBLISHED_POSTS) $(PUBLISHED_RESOURCES) $(TAGS_HTML) $(LATEST_HTML) $(INDEX_HTML) $(RSS_XML)
 	if [ "$(CNAME)" != "" ];\
 	then printf "$(CNAME)" > $(PUBLISH_DIR)/CNAME;\
 	fi;
@@ -46,11 +53,11 @@ new:
 	export NEW_DIRECTORY=$(POSTS_DIR)/$(shell echo '$(lastword $(POST_NUMBERS))' | awk '{ printf "%05d", $$1 + 1 }')_$$POST_TITLE;\
 	mkdir -p "$$NEW_DIRECTORY";\
 	touch "$$NEW_DIRECTORY/post.md" "$$NEW_DIRECTORY/tags.txt";\
-	date +"%Y-%m-%d" | tr -d '\n' > "$$NEW_DIRECTORY/timestamp";\
+	date -R | tr -d '\n' > "$$NEW_DIRECTORY/timestamp";\
 
 # Split up the header/footer processing to take advantage of divs, despite markdown not strictly processing them
 # output/intermediates/.../X.html -> output/publish/.../X.html
-$(PUBLISH_DIR)/%.html: $(HEADER_HTML) $(INT_DIR)/%.html $(FOOTER_HTML) 
+$(PUBLISH_DIR)/%.html: $(HEADER_HTML) $(INT_DIR)/%.html $(FOOTER_HTML)
 	mkdir -p $(@D)
 	cat $^ > $@
 
@@ -58,6 +65,19 @@ $(PUBLISH_DIR)/%.html: $(HEADER_HTML) $(INT_DIR)/%.html $(FOOTER_HTML)
 $(LATEST_HTML): $(lastword $(PUBLISHED_POSTS))
 	mkdir -p $(@D)
 	cp $< $@
+
+$(RSS_XML): $(INTERMEDIATE_RSS_XML)
+	mkdir -p $(@D)
+	printf '<?xml version="1.0" encoding="UTF-8" ?>\n' > $@
+	printf '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">\n' >> $@
+	printf '<channel>\n' >> $@
+	printf '<atom:link href="$(BLOG_ROOT_LINK)/rss.xml" rel="self" type="application/rss+xml" />\n' >> $@
+	printf '<title>$(BLOG_TITLE)</title>\n' >> $@
+	printf '<link>$(BLOG_ROOT_LINK)</link>\n' >> $@
+	printf '<description>$(call ESCAPE_QUOTES,$(BLOG_DESCRIPTION))</description>\n' >> $@
+	cat $^ >> $@
+	printf '</channel>\n' >> $@
+	printf '</rss>' >> $@
 
 # output/intermediates/.../X.md -> output/intermediates/.../X.html
 # This is the key point that converts all our markdown into html
@@ -68,27 +88,37 @@ $(INT_DIR)/%.html: $(INT_DIR)/%.md
 # For posts, we print the post title and before/after posts
 # note that this will concatenate multiple posts with the same number in Make's sorted order (it's consistent within versions of Make, but we don't control the sort spec)
 # Also this means we don't support underscores or forward slashes in titles since they'll get replaced
-$(INT_DIR)/%.md: $(POSTS_DIR)/%_*/post.md $(POSTS_DIR)/%_*/timestamp
+$(INT_DIR)/%.md $(INT_DIR)/%.xml &: $(POSTS_DIR)/%_*/post.md $(POSTS_DIR)/%_*/timestamp
 	mkdir -p $(@D)
-	printf "<sub>Posted on " > $@
-	cat "$(call ESCAPE_QUOTES,$(lastword $^))" >> $@ 
-	printf "</sub>\n" >> $@
-	printf "<head><meta charset=\"UTF-8\"><title>$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))</title><head>\n" >> $@
-	printf "# [$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))]($*.html)\n" >> $@
+	printf "<head><meta charset=\"UTF-8\"><title>$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))</title><head>\n" > $(INT_DIR)/$*.md
+	printf "<sub>Posted on " >> $(INT_DIR)/$*.md
+	cat "$(call ESCAPE_QUOTES,$(lastword $^))" >> $(INT_DIR)/$*.md
+	printf "</sub>\n" >> $(INT_DIR)/$*.md
+	printf "# [$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))]($*.html)\n" >> $(INT_DIR)/$*.md
 
-	cat "$(call ESCAPE_QUOTES,$<)" >> $@
+	cat "$(call ESCAPE_QUOTES,$<)" >> $(INT_DIR)/$*.md
 	
 	@export PREVIOUS_POST="$(strip $(filter-out $*.html, $(subst $(PUBLISH_DIR)/,,$(shell echo $(PUBLISHED_POSTS) | tr ' ' '\n' | grep -B1 $*.html))))";\
 	export NEXT_POST="$(strip $(filter-out $*.html, $(subst $(PUBLISH_DIR)/,,$(shell echo $(PUBLISHED_POSTS) | tr ' ' '\n' | grep -A1 $*.html))))";\
 	if [ "$$PREVIOUS_POST" != "" ] || [ "$$NEXT_POST" != "" ];\
-		then printf "\n\n" >> $@;\
+		then printf "\n\n" >> $(INT_DIR)/$*.md;\
 	fi;\
 	if [ "$$PREVIOUS_POST" != "" ];\
-		then printf "[<< Previous Post]($$PREVIOUS_POST) " >> $@;\
+		then printf "[<< Previous Post]($$PREVIOUS_POST) " >> $(INT_DIR)/$*.md;\
 	fi;\
 	if [ "$$NEXT_POST" != "" ];\
-		then printf "[Next Post >>]($$NEXT_POST)" >> $@;\
+		then printf "[Next Post >>]($$NEXT_POST)" >> $(INT_DIR)/$*.md;\
 	fi;
+
+	printf '<item>\n' > $(INT_DIR)/$*.xml
+	printf '<title>$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<)))</title>\n' >> $(INT_DIR)/$*.xml
+	printf '<description></description>\n' >> $(INT_DIR)/$*.xml
+	printf '<link>$(BLOG_ROOT_LINK)/$*.html</link>\n' >> $(INT_DIR)/$*.xml
+	printf '<guid>$(BLOG_ROOT_LINK)/$*.html</guid>\n' >> $(INT_DIR)/$*.xml
+	printf '<pubDate>' >> $(INT_DIR)/$*.xml
+	cat "$(call ESCAPE_QUOTES,$(lastword $^))" >> $(INT_DIR)/$*.xml
+	printf '</pubDate>\n' >> $(INT_DIR)/$*.xml
+	printf '</item>\n' >> $(INT_DIR)/$*.xml
 
 # Resources
 $(PUBLISH_DIR)/%: $(RESOURCES_DIR)/%
