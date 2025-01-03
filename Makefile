@@ -59,7 +59,8 @@ new:
 # output/intermediates/.../X.html -> output/publish/.../X.html
 $(PUBLISH_DIR)/%.html: $(HEADER_HTML) $(INT_DIR)/%.html $(FOOTER_HTML)
 	mkdir -p $(@D)
-	cat $^ > $@
+	printf '<!DOCTYPE html>\n' > $@
+	cat $^ >> $@
 
 # Latest is just going to be the last post, which is ordered, so just copy it
 $(LATEST_HTML): $(lastword $(PUBLISHED_POSTS))
@@ -90,13 +91,16 @@ $(INT_DIR)/%.html: $(INT_DIR)/%.md
 # Also this means we don't support underscores or forward slashes in titles since they'll get replaced
 $(INT_DIR)/%.md $(INT_DIR)/%.xml &: $(POSTS_DIR)/%_*/post.md $(POSTS_DIR)/%_*/timestamp
 	mkdir -p $(@D)
-	printf "<head><meta charset=\"UTF-8\"><title>$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))</title><head>\n" > $(INT_DIR)/$*.md
+	printf "<head><meta charset=\"UTF-8\"><title>$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))</title></head>\n" > $(INT_DIR)/$*.md
+	printf "<article>\n" >> $(INT_DIR)/$*.md
 	printf "<sub>Posted on " >> $(INT_DIR)/$*.md
 	cat "$(call ESCAPE_QUOTES,$(lastword $^))" >> $(INT_DIR)/$*.md
 	printf "</sub>\n" >> $(INT_DIR)/$*.md
 	printf "# [$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))]($*.html)\n" >> $(INT_DIR)/$*.md
 
 	cat "$(call ESCAPE_QUOTES,$<)" >> $(INT_DIR)/$*.md
+
+	printf '\n\n</article>\n' >> $(INT_DIR)/$*.md
 	
 	@export PREVIOUS_POST="$(strip $(filter-out $*.html, $(subst $(PUBLISH_DIR)/,,$(shell echo $(PUBLISHED_POSTS) | tr ' ' '\n' | grep -B1 $*.html))))";\
 	export NEXT_POST="$(strip $(filter-out $*.html, $(subst $(PUBLISH_DIR)/,,$(shell echo $(PUBLISHED_POSTS) | tr ' ' '\n' | grep -A1 $*.html))))";\
