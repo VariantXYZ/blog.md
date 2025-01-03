@@ -106,20 +106,20 @@ $(INT_DIR)/%.xml: $(POSTS_DIR)/%_*/timestamp $(INT_DIR)/article_%.html
 # For posts, we print the post title and before/after posts
 # note that this will concatenate multiple posts with the same number in Make's sorted order (it's consistent within versions of Make, but we don't control the sort spec)
 # Also this means we don't support underscores or forward slashes in titles since they'll get replaced
-$(INT_DIR)/article_%.md: $(POSTS_DIR)/%_*/post.md $(POSTS_DIR)/%_*/timestamp
+$(INT_DIR)/article_%.md: $(POSTS_DIR)/%_*/post.md
 	mkdir -p $(@D)
-	printf "<head><meta charset=\"UTF-8\"><title>$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))</title></head>\n" > $@
+	cat "$(call ESCAPE_QUOTES,$<)" >> $@
+
+$(INT_DIR)/%.md: $(POSTS_DIR)/%_*/timestamp $(INT_DIR)/article_%.md
+	mkdir -p $(@D)
+	printf "<head><meta charset=\"UTF-8\"><title>$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out timestamp,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))</title></head>\n" > $@
 	printf "<article>\n" >> $@
 	printf "<sub>Posted on " >> $@
-	cat "$(call ESCAPE_QUOTES,$(lastword $^))" >> $@
-	printf "</sub>\n" >> $@
-	printf "# [$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))]($*.html)\n" >> $@
 	cat "$(call ESCAPE_QUOTES,$<)" >> $@
+	printf "</sub>\n" >> $@
+	printf "# [$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out timestamp,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))]($*.html)\n" >> $@
+	cat $(lastword $^) >> $@
 	printf '\n</article>\n' >> $@
-
-$(INT_DIR)/%.md: $(INT_DIR)/article_%.md
-	mkdir -p $(@D)
-	cat $^ > $@
 
 	@export PREVIOUS_POST="$(strip $(filter-out $*.html, $(subst $(PUBLISH_DIR)/,,$(shell echo $(PUBLISHED_POSTS) | tr ' ' '\n' | grep -B1 $*.html))))";\
 	export NEXT_POST="$(strip $(filter-out $*.html, $(subst $(PUBLISH_DIR)/,,$(shell echo $(PUBLISHED_POSTS) | tr ' ' '\n' | grep -A1 $*.html))))";\
