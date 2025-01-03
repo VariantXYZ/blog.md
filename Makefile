@@ -87,9 +87,10 @@ $(INT_DIR)/%.html: $(INT_DIR)/%.md
 	qjs -I '$(BASE)/external/pagedown/Markdown.Converter.js' -e "var text=String.raw\`$(call ESCAPE_JSC_RAWSTRING,$(shell awk '{ printf "%s\\n", $$0 }' $<))\`;var converter = new Markdown.Converter();console.log(converter.makeHtml(text.replaceAll('\\\\n','\\n')));" > $@
 
 # Generate the RSS entry for this post, but avoid including the link to the next/previous post
+# Note that we get the original post title from the timestamp directory
 $(INT_DIR)/%.xml: $(POSTS_DIR)/%_*/timestamp $(INT_DIR)/article_%.html
 	printf '<item>\n' > $@
-	printf '<title>$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<)))</title>\n' >> $@
+	printf '<title>$(wordlist 3,$(words $(filter-out timestamp,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<)))</title>\n' >> $@
 	printf '<description>' >> $@
 	printf '<![CDATA[' >> $@
 	cat "$(INT_DIR)/article_$*.html" >> $@
