@@ -86,43 +86,51 @@ $(INT_DIR)/%.html: $(INT_DIR)/%.md
 	mkdir -p $(@D)
 	qjs -I '$(BASE)/external/pagedown/Markdown.Converter.js' -e "var text=String.raw\`$(call ESCAPE_JSC_RAWSTRING,$(shell awk '{ printf "%s\\n", $$0 }' $<))\`;var converter = new Markdown.Converter();console.log(converter.makeHtml(text.replaceAll('\\\\n','\\n')));" > $@
 
+# Generate the RSS entry for this post, but avoid including the link to the next/previous post
+$(INT_DIR)/%.xml: $(POSTS_DIR)/%_*/timestamp $(INT_DIR)/article_%.html
+	printf '<item>\n' > $@
+	printf '<title>$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<)))</title>\n' >> $@
+	printf '<description>' >> $@
+	printf '<![CDATA[' >> $@
+	cat "$(INT_DIR)/article_$*.html" >> $@
+	printf ']]>' >> $@
+	printf '</description>\n' >> $(INT_DIR)/$*.xml
+	printf '<link>$(BLOG_ROOT_LINK)/$*.html</link>\n' >> $@
+	printf '<guid>$(BLOG_ROOT_LINK)/$*.html</guid>\n' >> $@
+	printf '<pubDate>' >> $@
+	cat "$(call ESCAPE_QUOTES,$<)" >> $@
+	printf '</pubDate>\n' >> $@
+	printf '</item>\n' >> $@
+
 # For posts, we print the post title and before/after posts
 # note that this will concatenate multiple posts with the same number in Make's sorted order (it's consistent within versions of Make, but we don't control the sort spec)
 # Also this means we don't support underscores or forward slashes in titles since they'll get replaced
-$(INT_DIR)/%.md $(INT_DIR)/%.xml &: $(POSTS_DIR)/%_*/post.md $(POSTS_DIR)/%_*/timestamp
+$(INT_DIR)/article_%.md: $(POSTS_DIR)/%_*/post.md $(POSTS_DIR)/%_*/timestamp
 	mkdir -p $(@D)
-	printf "<head><meta charset=\"UTF-8\"><title>$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))</title></head>\n" > $(INT_DIR)/$*.md
-	printf "<article>\n" >> $(INT_DIR)/$*.md
-	printf "<sub>Posted on " >> $(INT_DIR)/$*.md
-	cat "$(call ESCAPE_QUOTES,$(lastword $^))" >> $(INT_DIR)/$*.md
-	printf "</sub>\n" >> $(INT_DIR)/$*.md
-	printf "# [$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))]($*.html)\n" >> $(INT_DIR)/$*.md
+	printf "<head><meta charset=\"UTF-8\"><title>$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))</title></head>\n" > $@
+	printf "<article>\n" >> $@
+	printf "<sub>Posted on " >> $@
+	cat "$(call ESCAPE_QUOTES,$(lastword $^))" >> $@
+	printf "</sub>\n" >> $@
+	printf "# [$(call ESCAPE_QUOTES,$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<))))]($*.html)\n" >> $@
+	cat "$(call ESCAPE_QUOTES,$<)" >> $@
+	printf '\n</article>\n' >> $@
 
-	cat "$(call ESCAPE_QUOTES,$<)" >> $(INT_DIR)/$*.md
+$(INT_DIR)/%.md: $(INT_DIR)/article_%.md
+	mkdir -p $(@D)
+	cat $^ > $@
 
-	printf '\n\n</article>\n' >> $(INT_DIR)/$*.md
-	
 	@export PREVIOUS_POST="$(strip $(filter-out $*.html, $(subst $(PUBLISH_DIR)/,,$(shell echo $(PUBLISHED_POSTS) | tr ' ' '\n' | grep -B1 $*.html))))";\
 	export NEXT_POST="$(strip $(filter-out $*.html, $(subst $(PUBLISH_DIR)/,,$(shell echo $(PUBLISHED_POSTS) | tr ' ' '\n' | grep -A1 $*.html))))";\
 	if [ "$$PREVIOUS_POST" != "" ] || [ "$$NEXT_POST" != "" ];\
 		then printf "\n\n" >> $(INT_DIR)/$*.md;\
 	fi;\
 	if [ "$$PREVIOUS_POST" != "" ];\
-		then printf "[<< Previous Post]($$PREVIOUS_POST) " >> $(INT_DIR)/$*.md;\
+		then printf "[<< Previous Post]($$PREVIOUS_POST) " >> $@;\
 	fi;\
 	if [ "$$NEXT_POST" != "" ];\
-		then printf "[Next Post >>]($$NEXT_POST)" >> $(INT_DIR)/$*.md;\
+		then printf "[Next Post >>]($$NEXT_POST)" >> $@;\
 	fi;
-
-	printf '<item>\n' > $(INT_DIR)/$*.xml
-	printf '<title>$(wordlist 3,$(words $(filter-out post.md,$(subst _, ,$(subst /, ,$<)))), $(subst _, ,$(subst /, ,$<)))</title>\n' >> $(INT_DIR)/$*.xml
-	printf '<description></description>\n' >> $(INT_DIR)/$*.xml
-	printf '<link>$(BLOG_ROOT_LINK)/$*.html</link>\n' >> $(INT_DIR)/$*.xml
-	printf '<guid>$(BLOG_ROOT_LINK)/$*.html</guid>\n' >> $(INT_DIR)/$*.xml
-	printf '<pubDate>' >> $(INT_DIR)/$*.xml
-	cat "$(call ESCAPE_QUOTES,$(lastword $^))" >> $(INT_DIR)/$*.xml
-	printf '</pubDate>\n' >> $(INT_DIR)/$*.xml
-	printf '</item>\n' >> $(INT_DIR)/$*.xml
 
 # Resources
 $(PUBLISH_DIR)/%: $(RESOURCES_DIR)/%
