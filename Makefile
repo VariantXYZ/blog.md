@@ -74,7 +74,7 @@ $(RSS_XML): $(INTERMEDIATE_RSS_XML)
 	printf '<atom:link href="$(BLOG_ROOT_LINK)/rss.xml" rel="self" type="application/rss+xml" />\n' >> $@
 	printf '<title>$(BLOG_TITLE)</title>\n' >> $@
 	printf '<link>$(BLOG_ROOT_LINK)</link>\n' >> $@
-	printf '<description>$(call ESCAPE_QUOTES,$(BLOG_DESCRIPTION))</description>\n' >> $@
+	printf '<description>$(BLOG_DESCRIPTION)</description>\n' >> $@
 	cat $^ >> $@
 	printf '</channel>\n' >> $@
 	printf '</rss>' >> $@
