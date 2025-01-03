@@ -1,6 +1,6 @@
-BLOG_TITLE := Blog
-BLOG_ROOT_LINK := https://www.example.com
-BLOG_DESCRIPTION := An interactive web experience
+BLOG_TITLE := vxyz.me
+BLOG_ROOT_LINK := https://www.vxyz.me
+BLOG_DESCRIPTION := Variant'"'"'s blog
 
 BASE := .
 POSTS_DIR := $(BASE)/posts
