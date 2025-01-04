@@ -206,11 +206,9 @@ th.fonts, td.fonts
 
 # Conclusions
 
-It's not quite as apples-to-apples, but English taking 200 characters to convey what Japanese does in 148 is indicative of a larger trend we see that causes a lot of trouble when it comes to the actual storage of English text when memory is limited... This is a storage problem though, and on the topic of visual space: English can do pretty well!
+It's not quite as apples-to-apples, but English taking 200 characters to convey what Japanese does in 148 is indicative of a larger trend we see that causes a lot of trouble when it comes to the actual storage of English text when memory is limited... This is a storage problem though, and not one of actual visual space. If we're willing to spend the computation to render English text dynamically, then we can fit as much, if not more information within the same visual space by using a variable-width font!
 
-If we're willing to render English variable-width text dynamically, we can fit as much, if not more information within the same visual space!
-
-Now if we could just figure out a way to do it in a way that didn't involve needing to draw text dynamically while maintaining the same text storage efficiency... I suppose that's a deep dive for another time, or research for someone smarter than me to get into.
+Now if we could just figure out a way to do it in a way that didn't involve needing to draw text dynamically while maintaining the same text storage efficiency... I suppose that's a deep dive for another time, or research for someone smarter than me to get into. For now, at least, I'll focus on shoving VWF into as many projects as I can.
 
 # Some final personal notes
 
