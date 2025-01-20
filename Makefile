@@ -30,9 +30,11 @@ empty =
 space = $(empty) $(empty)
 quote = "
 comma = ,
+dollar = $$
 ESCAPE_STRING = $(subst $(comma),\$(comma),$(subst !,\!,$(subst ?,\?,$(subst $(space),\$(space),$(subst $(quote),\$(quote),$(1))))))
 ESCAPE_QUOTES = $(subst $(quote),\$(quote),$(1))
-ESCAPE_JSC_RAWSTRING = $(subst $(quote),\$(quote),$(subst `,\$${"\`"},$(1)))
+ESCAPE_DOLLAR = $(subst $(dollar),\$(dollar),$(1))
+ESCAPE_JSC_RAWSTRING = $(subst $(quote),\$(quote),$(subst `,\$${"\`"},$(call ESCAPE_DOLLAR,$(1))))
 
 .SECONDARY:
 .PHONY: site clean new

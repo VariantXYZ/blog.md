@@ -11,8 +11,9 @@ code
 block
 ``
 
-```
+``
 code 
 block 
 2
-```
+contains a $variable reference
+``
