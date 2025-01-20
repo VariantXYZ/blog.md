@@ -22,6 +22,9 @@ span.sidebar {
     top: auto;
     left: 100%;
 }
+div.holder code {
+    white-space: pre-wrap;
+}
 </style>
 <div class="holder">
 <div class="left-align">
