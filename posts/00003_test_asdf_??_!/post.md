@@ -16,4 +16,5 @@ code
 block 
 2
 contains a $variable reference
+also ${variable} ref
 ``
