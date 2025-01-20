@@ -1,0 +1,3 @@
+powerpc
+cross-compilation
+tutorial

@@ -41,9 +41,6 @@ span.sidebar {
     margin-left: 5px;
     padding-right: 5px;
 }
-div.holder code {
-    white-space: pre-wrap;
-}
 </style>
 <div class="holder">
 <div class="left-align">
