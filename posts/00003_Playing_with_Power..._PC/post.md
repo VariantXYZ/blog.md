@@ -248,25 +248,7 @@ We need libpng for rgbgfx, so we'll build it first and install it into our prefi
 
 ### rgbds
 
-Working on tag v0.9.0 (a good way to test that C++20 works). PNG should be in our search path automatically, but we need to make sure it doesn't use the host-installed libpng, so we have to edit the Makefile accordingly. It should be sufficient to just allow setting the PNG flags manually.
-
-Change the following in `Makefile`:
-
-    PNGCFLAGS       := `${PKG_CONFIG} --cflags libpng`
-    PNGLDFLAGS      := `${PKG_CONFIG} --libs-only-L libpng`
-    PNGLDLIBS       := `${PKG_CONFIG} --libs-only-l libpng`
-
-
-to:
-
-    PNGCFLAGS       ?= `${PKG_CONFIG} --cflags libpng`
-    PNGLDFLAGS      ?= `${PKG_CONFIG} --libs-only-L libpng`
-    PNGLDLIBS       ?= `${PKG_CONFIG} --libs-only-l libpng`
-
-
-Also, allow for overriding the installation prefix:
-
-`PREFIX          := /usr/local` to `PREFIX          ?= /usr/local`
+Working on tag v0.9.0 (a good way to test that C++20 works). PNG should be in our search path automatically, but we need to make sure it doesn't use the host-installed libpng.
 
     mkdir -p rgbds
     cd rgbds
@@ -276,7 +258,7 @@ Also, allow for overriding the installation prefix:
     git checkout FETCH_HEAD
     
     mkdir -p $TARGET_PREFIX/$TARGET/deploy
-    PATH=$TARGET_PREFIX/$TARGET/bin:$PATH LDFLAGS="-static-libstdc++ -static-libgcc" PNGCFLAGS="" PNGLDFLAGS="-lpng" PNGLDLIBS="" CXX=$TARGET_PREFIX/bin/$TARGET-g++ CC=$TARGET_PREFIX/bin/$TARGET-gcc  MACOSX_PPC_DEPLOYMENT_TARGET=10.4 CXXFLAGS="-D__STDC_FORMAT_MACROS" PREFIX=$TARGET_PREFIX/deploy make install -j
+    PATH=$TARGET_PREFIX/$TARGET/bin:$PATH MACOSX_PPC_DEPLOYMENT_TARGET=10.4 make install -j LDFLAGS="-static-libstdc++ -static-libgcc" PNGCFLAGS="" PNGLDFLAGS="-lpng" PNGLDLIBS="" CXX=$TARGET_PREFIX/bin/$TARGET-g++ CC=$TARGET_PREFIX/bin/$TARGET-gcc CXXFLAGS="-D__STDC_FORMAT_MACROS" PREFIX=$TARGET_PREFIX/deploy
 
 Note:
 * We need to add `-D__STDC_FORMAT_MACROS` when using g++ in our case since `inttypes.h` will not enable certain macros otherwise (C99 locks it behind a macro, C++ doesn't seem to care)
