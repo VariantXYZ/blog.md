@@ -31,10 +31,12 @@ space = $(empty) $(empty)
 quote = "
 comma = ,
 dollar = $$
+bracket_left = {
 ESCAPE_STRING = $(subst $(comma),\$(comma),$(subst !,\!,$(subst ?,\?,$(subst $(space),\$(space),$(subst $(quote),\$(quote),$(1))))))
 ESCAPE_QUOTES = $(subst $(quote),\$(quote),$(1))
 ESCAPE_DOLLAR = $(subst $(dollar),\$(dollar),$(1))
-ESCAPE_JSC_RAWSTRING = $(subst $(quote),\$(quote),$(subst `,\$${"\`"},$(call ESCAPE_DOLLAR,$(1))))
+ESCAPE_BRACKETS = $(subst $(bracket_left),\$${"{"},$(1)) # Only need to escape one to avoid unintentional interpolation
+ESCAPE_JSC_RAWSTRING = $(subst $(quote),\$(quote),$(subst `,\$${"\`"},$(call ESCAPE_BRACKETS,$(call ESCAPE_DOLLAR,$(1)))))
 
 .SECONDARY:
 .PHONY: site clean new
