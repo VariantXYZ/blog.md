@@ -11,221 +11,173 @@ pre {
 
 I bought a cheap 2004 iBook G4 for like 35$ and wanted to see if I could bring some life to it for something like no-distraction Gameboy development or just writing stuff. For how old it is, OS X 10.4.11 (Tiger) runs pretty well... but not well enough for me to try building complex things on it (a Gameboy toolchain is about it). So, I figured my project for the week would be to see what the state of cross-compiling a modern toolchain for a >20 year old system would look like.
 
-Below, you'll find whatever shenanigans I had to do to get things working. If I'm able to find a cleaner way to do it, I'll update this post, but for now I think this may only be feasible on a Mac (I guess, since the new M4 Mac Mini exists, it might actually be a neat little remote compilation machine).
+The original verison of this post from yesterday actually relied on some ancient binaries from old versions of XCode, but thanks to the dedicated efforts of several people in the last decade, we have a fairly recent ld we can build on anything with Clang 10 or higher and some useful information.
 
-All that being said, there's a few points that irk me still, and I bring them up below, but it really just boils down to the fact that there are a handful of key components that are locked to just being old binaries...
+For reference, you can see the original markdown for that post [here](https://github.com/VariantXYZ/blog.md/blob/5a1277e651acd204fd1e182680be3a698fea241a/posts/00003_Playing_with_Power..._PC/post.md).
 
-Notes:
+It's pretty cool how many people still seem to want to keep these old things alive.
 
-* `as`, `ld`, and `dsymutil` aren't buildable for powerpc-apple-darwin8 as far as I can tell, so I had to rely on old ones
-	* Due to this, I don't know exactly how this could work in another OS, but apparently the [OSX Cross](https://github.com/tpoechtrager/osxcross/blob/ppc-test/README.PPC-GCC-5.5.0-SDK-10.5.md) project had something working for GCC 5.5 so maybe it's possible? I'll try asking
-	* Also reference [this comment](https://github.com/Homebrew/homebrew-core/issues/29177#issuecomment-399011481) in homebrew
-* I'm pretty pedantic about specific revisions to make sure my stuff is as reproduceable as can be, so I happen to do shallow clones to a specific commit often
-* I've tested the steps below are all just run within a new empty directory, so keep that in mind wherever it matters
+Anyway, here's what I've accumulated to build the rgbds toolchain for powerpc-apple-darwin8.
 
 ## References
 
 [Bluzt3's Blog]: https://maniacsvault.net/articles/powerpccross
 [OSDev Wiki]: https://wiki.osdev.org/GCC_Cross-Compiler
+[OSXCross/cctools-port]: https://github.com/tpoechtrager/cctools-port
 
 * [Bluzt3's Blog][]
 * [OSDev Wiki][]
+* [OSXCross/cctools-port][]
 
 ## Pre-requisites
 
-* Tested on macOS 15.2 on a M1 Mac with clang 16
-* Install texinfo `brew install texinfo`
-(It may be possible some other build tools are needed, need to check on a clean machine)
+* clang > 10
+* CMake > 3.4.3 (only really for )
+* Make > 4
+* Whatever GCC might need (I needed to do `brew install texinfo`)
+* `llvm-devel` if you want LTO support (recommend it)
 
-## Host Toolchain
+The following instructions all operate based on the environment variables below and from a root directory.
+
+## Environment
 
     export ROOT_DIR="$(pwd)"
-    export HOST_PREFIX="$ROOT_DIR/install/host"
-    mkdir -p "$HOST_PREFIX"
-
-
-### gcc
-
-    mkdir -p gcc
-    cd gcc
-    git init
-    git remote add origin git@github.com:iains/gcc-13-branch.git 
-    git fetch --depth 1 origin 7808d253bf53c6c6ce63f04a66601b595e2bae08
-    git checkout FETCH_HEAD
-    ./contrib/download_prerequisites
-    cd -
-
-
-    mkdir -p build/host/gcc
-    cd build/host/gcc
-    $ROOT_DIR/gcc/configure --prefix="$HOST_PREFIX" --disable-nls --disable-multilib --enable-languages=c,c++,lto --with-dwarf2 --with-sysroot=$(xcrun --show-sdk-path) && \
-    make all-gcc -j && \
-    make all-target-libgcc -j && \
-    make all-target-libstdc++-v3 -j && \
-    make install-gcc -j && \
-    make install-target-libgcc -j && \
-    make install-target-libstdc++-v3 -j
-    cd -
-
-
-### binutils
-
-(Realistically, it's probably OK to skip this, you'd just end up using the system-installed binutils anyway, and you can't build as/ld at any rate)
-
-
-    mkdir -p binutils
-    cd binutils
-    git init
-    git remote add origin git@github.com:iains/binutils-gdb.git
-    git fetch --depth 1 origin 2c96d55e5816d2e85bd1b0a7a64595a51465f22b
-    git checkout FETCH_HEAD
-    ln -s $ROOT_DIR/gcc/gmp gmp
-    ln -s $ROOT_DIR/gcc/mpfr mpfr
-    ln -s $ROOT_DIR/gcc/mpc mpc
-    ln -s $ROOT_DIR/gcc/isl isl
-    cd -
-
-
-    mkdir -p build/host/binutils
-    cd build/host/binutils
-    CC=$HOST_PREFIX/bin/gcc CXX=$HOST_PREFIX/bin/g++ $ROOT_DIR/binutils/configure --prefix="$HOST_PREFIX" --disable-nls --disable-gdb && \
-    make -j && \
-    make install -j
-    cd -
-
-
-## Target Toolchain
-
     export TARGET_PREFIX="$(pwd)/install/target"
     export TARGET=powerpc-apple-darwin8
-    export MACOSX_PPC_DEPLOYMENT_TARGET=10.4
     export MAC_SDK_VERSION=MacOSX10.4u
+    export MACOSX_PPC_DEPLOYMENT_TARGET=10.4
     mkdir -p "$TARGET_PREFIX"
 
+**NOTE**: We are using the 10.4 SDK but will need to rebuild crt1.o. This is due to the [issue with 10.4's crt1.o](https://github.com/tpoechtrager/osxcross/issues/50#issuecomment-149013354). 10.5 should theoretically work too.
 
-**NOTE**: `MACOSX_DEPLOYMENT_TARGET` will affect the host toolchain too, so we need to make sure it's only set in the PPC target, so we only set `MACOSX_PPC_DEPLOYMENT_TARGET` here
+## dsymutil
 
-### Get MacOS 10.4u SDK
+Not included as part of cctools, so we'll quickly build llvm 7.1.1, which is the last version with powerpc-apple-darwin8 target support with dsymutil.
+
+This is easily the longest part of the whole process because apparently we need to build a ton of LLVM before we can build dsymutil...
+
+    mkdir -p llvm-project
+    cd llvm-project
+    git init
+    git remote add origin git@github.com:llvm/llvm-project.git
+    git fetch --depth 1 origin 4856a9330ee01d30e9e11b6c2f991662b4c04b07
+    git checkout FETCH_HEAD
+    cd -
+
+    mkdir -p build/target/llvm-project
+    cd build/target/llvm-project
+    cmake $ROOT_DIR/llvm-project/llvm \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DLLVM_TARGETS_TO_BUILD="PowerPC" \
+      -DLLVM_ENABLE_ASSERTIONS=OFF
+    make -f tools/dsymutil/Makefile -j dsymutil
+    mkdir -p $TARGET_PREFIX/bin
+    cp bin/dsymutil $TARGET_PREFIX/bin/$TARGET-dsymutil
+    cd -
+
+## cctools
+
+Thanks to [Wohlstand](https://github.com/tpoechtrager/cctools-port/issues/119#issuecomment-1384868472), we have a fairly recent set of PPC tools. Note that these require clang to build.
+
+    mkdir -p cctools-port
+    cd cctools-port
+    git init
+    git remote add origin git@github.com:Wohlstand/cctools-port.git
+    git fetch --depth 1 origin f0ac160455ce815def93194a298c07d78e81f343
+    git checkout FETCH_HEAD
+    cd -
+
+Also reference: https://github.com/NixOS/nixpkgs/issues/149692, we want to build ld with a larger stack size to avoid issues when generating debug information later (though it isn't a permanent fix, if a 256 MB stack size isn't enough, we'll need to revisit...)
+
+    mkdir -p build/target/cctools-port
+    cd build/target/cctools-port
+    $ROOT_DIR/cctools-port/cctools/configure LDFLAGS="-Wl,-stack_size -Wl,0x10000000" --prefix=$TARGET_PREFIX --target=$TARGET 
+    make -j && \
+    make install -j
+    mkdir -p $TARGET_PREFIX/$TARGET/bin
+    for i in ld ar as lipo nm ranlib strip dsymutil; do
+      ln -s "$TARGET_PREFIX/bin/$TARGET-$i" "$TARGET_PREFIX/$TARGET/bin/$i"
+    done
+    cd -
+
+
+## MacOSX SDK
 
     wget https://github.com/phracker/MacOSX-SDKs/releases/download/11.3/$MAC_SDK_VERSION.sdk.tar.xz
     tar xf ./$MAC_SDK_VERSION.sdk.tar.xz -C $TARGET_PREFIX
 
-
-**NOTE**: We explicitly copy it into the prefix so it should benefit from the `--with-sysroot` option, at least according to the GCC docs:
-
-
+We explicitly copy it into the prefix so it should benefit from the `--with-sysroot` option, at least according to the GCC docs:
 `If the specified directory is a subdirectory of ${exec_prefix}, then it will be found relative to the GCC binaries if the installation tree is moved.`
 
+We then also need to extract the ppc binaries out of the universal binaries, allowing us to actually link against them. Note that we don't want to hit the `ppc7400` binaries, since those are for 10.5 and the goal here is just for a Tiger focused SDK.
 
-### Binutils
-
-(Not strictly necessary, see below)
-
-    mkdir -p build/target/binutils
-    cd build/target/binutils
-    CC=$HOST_PREFIX/bin/gcc CXX=$HOST_PREFIX/bin/g++ $ROOT_DIR/binutils/configure --prefix="$TARGET_PREFIX" --disable-nls C{,XX}FLAGS_FOR_TARGET="-isysroot $TARGET_PREFIX/$MAC_SDK_VERSION.sdk -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" LDFLAGS_FOR_TARGET="-isysroot $TARGET_PREFIX/$MAC_SDK_VERSION.sdk -mmacosx-version-min=$MACOSX_DEPLOYMENT_TARGET" --disable-gdb --disable-sim --target=$TARGET && \
-    make -j && \
-    make install -j
+    cd $TARGET_PREFIX/$MAC_SDK_VERSION.sdk/usr/lib
+    for i in **/*.dylib **/*.a **/*.o; do
+      if file "$i" | grep -q "for architecture ppc)"; then
+        mv $i $i.universal
+        $TARGET_PREFIX/bin/$TARGET-lipo -thin ppc $i.universal -output $i
+      elif file "$i" | grep -q "for architecture ppc7400)"; then
+        mv $i $i.universal
+        $TARGET_PREFIX/bin/$TARGET-lipo -thin ppc7400 $i.universal -output $i
+      fi
+    done
     cd -
 
+## Building gcc
 
-### Mac OS X specific tools
+Some minor modifications to libgcc's dynamic library generation. Since it calls `lipo` to generate universal binaries, which our cctools-built linker doesn't support, I've created a simple patch to skip calling it when there's only one architecture.
 
-**NOTE**: This is, as far as I can tell, the only part that locks us into building on a Mac. Theoretically a simple linker and Mach-O-compatible assembler shouldn't be too crazy for powerpc/darwin8 at this stage...? We could probably get away without dsymutil as well.
-
-Reference [Bluzt3's Blog][] for this, we'll need to use [XcodeLegacy](https://github.com/devernay/xcodelegacy) to extract some tools.
-
-You'll need the following (which you can get off the Apple developer site, or maybe archive or something):
-* Xcode 6.4.dmg
-* xcode_3.2.6_and_ios_sdk_4.3.dmg
-* xcode_4.6.3.dmg
-
-#### dsymutil
-
-From the Xcode 6.4 dmg, dsymutil can be found in the mounted DMG at `Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/dsymutil`, copy and **rename** it into `$TARGET_PREFIX/$TARGET/bin/dsymutil-ppc`
-
-#### as and ld
-
-    mkdir -p xcodelegacy
-    cd xcodelegacy
+    mkdir -p gcc
+    cd gcc
     git init
-    git remote add origin git@github.com:devernay/xcodelegacy.git
-    git fetch --depth 1 origin 14053d06ad2e12615a165345763285661d8cc7ca
+    git remote add origin git@github.com:VariantXYZ/gcc-13-branch.git
+    git fetch --depth 1 origin 908dbc96f1271f995759c87fc9d32879d6f49756
     git checkout FETCH_HEAD
+    ./contrib/download_prerequisites
     cd -
 
-
-Copy `xcode_3.2.6_and_ios_sdk_4.3.dmg` and `xcode_4.6.3.dmg` into `$ROOT_DIR/xcodelegacy`
-
-    cd xcodelegacy
-    ./XcodeLegacy.sh -osx104 -compilers buildpackages
-    cp usr/bin/ld $TARGET_PREFIX/$TARGET/bin/ld-ppc
-    cp usr/libexec/gcc/darwin/ppc/as $TARGET_PREFIX/$TARGET/bin/as
-    cd -
-
-We need to specifically wrap ld to control its executing environment. We don't want `MACOSX_DEPLOYMENT_TARGET` to be set to 10.4 in the host-side compilation (I guess it's for legacy reasons at this point, but controlling build flags via the environment like this instead of explicitly is just asking for trouble in my opinion)
-
-Then create a file `$TARGET_PREFIX/$TARGET/bin/ld`:
-
-    #!/bin/bash
-
-    SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-
-    if [[ $MACOSX_PPC_DEPLOYMENT_TARGET ]]; then
-        export MACOSX_DEPLOYMENT_TARGET=$MACOSX_PPC_DEPLOYMENT_TARGET
-        exec $SCRIPT_DIR/ld-ppc "$@"
-    else
-        exec ld "$@"
-    fi
-
-
-Give it execute permissions with `chmod +x $TARGET_PREFIX/$TARGET/bin/ld`.
-
-As mentioned in [Bluzt3's Blog][], you'll need to do something similar for `strip` by renaming it to `strip-ppc` and creating a new script `$TARGET_PREFIX/$TARGET/bin/strip` with the following content:
-
-
-    #!/bin/bash
-
-    SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-
-    export MACOSX_DEPLOYMENT_TARGET=$MACOSX_PPC_DEPLOYMENT_TARGET
-    exec $SCRIPT_DIR/strip-ppc "$@"
-
-and `chmod +x $TARGET_PREFIX/$TARGET/bin/strip`
-
-Coincidentally, this is also an indication that you'll need to set `MACOSX_PPC_DEPLOYMENT_TARGET` on builds.
-
-#### Things that should not be necessary but are (FIXME)
-
-Honestly I wish we could use the things built within binutils, but something about the generated mach-o format of ar/ranlib from GCC breaks the libgcc build (it complains about libef_ppc.a not being the right architecture even though the objects inside are clearly Mach-o PPC). I'll need to dig into this more, I don't quite like not understanding why the regular binutils won't work (lipo aside).
-
-May need to investigate old projects like [binutils-apple](https://github.com/kwhat/binutils-apple/blob/master/README).
-
-I needed to do the following to get things to build (nm isn't necessary if you use binutils, at least):
-
-    cd $TARGET_PREFIX/$TARGET/bin
-    rm ar ranlib nm
-    ln -s /usr/bin/ar ar
-    ln -s /usr/bin/ranlib ranlib
-    ln -s /usr/bin/lipo lipo
-    ln -s /usr/bin/nm nm
-    cd -
-
-**NOTE**: You'll need to re-link when moving the toolchain directory, `ar` doesn't like being executed outside of `/usr/bin`, so a copy won't suffice.
-
-### gcc
+### Just the compiler
 
     mkdir -p build/target/gcc
     cd build/target/gcc
-    CC=$HOST_PREFIX/bin/gcc CXX=$HOST_PREFIX/bin/g++ DSYMUTIL_FOR_TARGET=$TARGET_PREFIX/$TARGET/bin/dsymutil-ppc AS_FOR_TARGET=$TARGET_PREFIX/$TARGET/bin/as LD_FOR_TARGET=$TARGET_PREFIX/$TARGET/bin/ld $ROOT_DIR/gcc/configure --disable-nls --disable-multilib --enable-languages=c,c++,lto --with-dwarf2 --prefix="$TARGET_PREFIX" --disable-nls --with-dsymutil="$TARGET_PREFIX/$TARGET/bin/dsymutil-ppc" C{,XX}FLAGS_FOR_TARGET="-mmacosx-version-min=$MACOSX_PPC_DEPLOYMENT_TARGET" LDFLAGS_FOR_TARGET="-mmacosx-version-min=$MACOSX_PPC_DEPLOYMENT_TARGET" --target=$TARGET --with-sysroot=$TARGET_PREFIX/$MAC_SDK_VERSION.sdk --disable-bootstrap && \
+    $ROOT_DIR/gcc/configure --disable-nls --disable-multilib --enable-languages=c,c++,lto --with-dwarf2 --prefix="$TARGET_PREFIX" --target=$TARGET --with-sysroot=$TARGET_PREFIX/$MAC_SDK_VERSION.sdk C{,XX}FLAGS_FOR_TARGET="-O2 -g -mmacosx-version-min=$MACOSX_PPC_DEPLOYMENT_TARGET" LDFLAGS_FOR_TARGET="-O2 -g -mmacosx-version-min=$MACOSX_PPC_DEPLOYMENT_TARGET" --disable-bootstrap && \
+    make all-gcc -j && \
+    make install-gcc -j
+    cd -
+
+Before we get back to gcc, we need to go rebuild crt1.o as mentioned above.
+
+### Rebuilding Apple crt1.o
+
+This one is a bit hacky compared to the rest, but we only need to rebuild one part of Apple's runtime libraries (crt1.o). This is only necessary if we're using the 10.4u SDK, at any rate.
+
+    mkdir -p csu
+    cd csu
+    git init
+    git remote add origin git@github.com:VariantXYZ/Csu.git
+    git fetch --depth 1 origin 06967ab403a7a04e30e2f32479285d68152cedd2
+    git checkout FETCH_HEAD
+    cd -
+
+(For the record, I just renamed files to let GCC handle assembly preprocessing, otherwise the cctools assembler has trouble)
+
+    cd csu
+    make CC=$TARGET_PREFIX/bin/powerpc-apple-darwin8-gcc ARCH_CFLAGS="-arch ppc -D__private_extern__= -isysroot $TARGET_PREFIX/$MAC_SDK_VERSION.sdk" ./crt1.v1.o
+    mv ./crt1.v1.o $TARGET_PREFIX/$MAC_SDK_VERSION.sdk/usr/lib/crt1.o
+    cd -
+
+### The rest of the GCC runtime/libraries
+
+    cd build/target/gcc
     make -j && \
     make install -j
     cd -
 
+...and that's it, that's the toolchain. Well, the target toolchain anyway, we still need the GBDev one :^).
 
 ## Building rgbds for powerpc-apple-darwin8
 
-`CFLAGS` and `CXXFLAGS` must include `-static-libstdc++` and `-staic-libgcc`, but other than that, it should be feasible to just reference `CC` and `CXX` to the powerpc toolchains. Note we're still operating in the same directory.
+`CFLAGS` and `CXXFLAGS` must include `-static-libstdc++` and `-static-libgcc` since we won't have dynamic libraries on the target, but other than that, it should be feasible to just reference `CC` and `CXX` to the powerpc toolchains. Note we're still operating in the same directory.
 
 ### libpng
 
@@ -241,9 +193,9 @@ We need libpng for rgbgfx, so we'll build it first and install it into our prefi
 
     mkdir -p build/target/libpng
     cd build/target/libpng
-    LDFLAGS="-static-libstdc++ -static-libgcc" CXX=$TARGET_PREFIX/bin/$TARGET-g++ CC=$TARGET_PREFIX/bin/$TARGET-gcc MACOSX_PPC_DEPLOYMENT_TARGET=10.4 $ROOT_DIR/libpng/configure --prefix=$TARGET_PREFIX/$TARGET --host=$TARGET
-    make -j
-    make install -j
+    PATH=$TARGET_PREFIX/bin:$PATH LDFLAGS="-static-libstdc++ -static-libgcc" CXX=$TARGET_PREFIX/bin/$TARGET-g++ CC=$TARGET_PREFIX/bin/$TARGET-gcc $ROOT_DIR/libpng/configure --prefix=$TARGET_PREFIX/$TARGET --host=$TARGET
+    PATH=$TARGET_PREFIX/bin:$PATH make -j
+    PATH=$TARGET_PREFIX/bin:$PATH make install -j
     cd -
 
 ### rgbds
@@ -258,14 +210,13 @@ Working on tag v0.9.0 (a good way to test that C++20 works). PNG should be in ou
     git checkout FETCH_HEAD
     
     mkdir -p $TARGET_PREFIX/$TARGET/deploy
-    PATH=$TARGET_PREFIX/$TARGET/bin:$PATH MACOSX_PPC_DEPLOYMENT_TARGET=10.4 make install -j LDFLAGS="-static-libstdc++ -static-libgcc" PNGCFLAGS="" PNGLDFLAGS="-lpng" PNGLDLIBS="" CXX=$TARGET_PREFIX/bin/$TARGET-g++ CC=$TARGET_PREFIX/bin/$TARGET-gcc CXXFLAGS="-D__STDC_FORMAT_MACROS" PREFIX=$TARGET_PREFIX/deploy
+    PATH=$TARGET_PREFIX/$TARGET/bin:$PATH make install -j LDFLAGS="-static-libstdc++ -static-libgcc" PNGCFLAGS="" PNGLDFLAGS="-lpng" PNGLDLIBS="" CXX=$TARGET_PREFIX/bin/$TARGET-g++ CC=$TARGET_PREFIX/bin/$TARGET-gcc CXXFLAGS="-D__STDC_FORMAT_MACROS" PREFIX=$TARGET_PREFIX/deploy
 
 Note:
 * We need to add `-D__STDC_FORMAT_MACROS` when using g++ in our case since `inttypes.h` will not enable certain macros otherwise (C99 locks it behind a macro, C++ doesn't seem to care)
 * We specify the path to make sure `strip` is called such that the `install` utility can use it, instead of the system strip
 
 Anyway, after all this, you can verify it with `file rgbasm`:
-
 
     % file rgbasm
     rgbasm: Mach-O executable ppc
