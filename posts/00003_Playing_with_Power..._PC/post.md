@@ -1,3 +1,15 @@
+I bought a cheap 2004 iBook G4 for like 35$ and wanted to see if I could bring some life to it for something like no-distraction Gameboy development or just writing stuff. For how old it is, OS X 10.4.11 (Tiger) runs pretty well... but not well enough for me to try building complex things on it (a Gameboy toolchain is about it). So, I figured my project for the week would be to see what the state of cross-compiling a modern toolchain for a >20 year old system would look like.
+
+The original verison of this post from yesterday actually relied on some ancient binaries from old versions of XCode, but thanks to the dedicated efforts of several people in the last decade, we have a fairly recent ld we can build on anything with Clang 10 or higher and some useful information.
+
+For reference, you can see the original markdown for that post [here](https://github.com/VariantXYZ/blog.md/blob/5a1277e651acd204fd1e182680be3a698fea241a/posts/00003_Playing_with_Power..._PC/post.md).
+
+It's pretty cool how many people still seem to want to keep these old things alive.
+
+Anyway, here's what I've accumulated to build the rgbds toolchain for powerpc-apple-darwin8.
+
+My updated Dockerfile for different versions of GCC and SDKs can be found [here](https://github.com/VariantXYZ/gcc-powerpc-apple-darwin8).
+
 <style>
 pre {
     display: block;
@@ -8,16 +20,6 @@ pre {
     background: lightgray;
 }
 </style>
-
-I bought a cheap 2004 iBook G4 for like 35$ and wanted to see if I could bring some life to it for something like no-distraction Gameboy development or just writing stuff. For how old it is, OS X 10.4.11 (Tiger) runs pretty well... but not well enough for me to try building complex things on it (a Gameboy toolchain is about it). So, I figured my project for the week would be to see what the state of cross-compiling a modern toolchain for a >20 year old system would look like.
-
-The original verison of this post from yesterday actually relied on some ancient binaries from old versions of XCode, but thanks to the dedicated efforts of several people in the last decade, we have a fairly recent ld we can build on anything with Clang 10 or higher and some useful information.
-
-For reference, you can see the original markdown for that post [here](https://github.com/VariantXYZ/blog.md/blob/5a1277e651acd204fd1e182680be3a698fea241a/posts/00003_Playing_with_Power..._PC/post.md).
-
-It's pretty cool how many people still seem to want to keep these old things alive.
-
-Anyway, here's what I've accumulated to build the rgbds toolchain for powerpc-apple-darwin8.
 
 ## References
 
@@ -32,12 +34,35 @@ Anyway, here's what I've accumulated to build the rgbds toolchain for powerpc-ap
 ## Pre-requisites
 
 * clang > 10
-* CMake > 3.4.3 (only really for )
+* CMake > 3.4.3
 * Make > 4
 * Whatever GCC might need (I needed to do `brew install texinfo`)
 * `llvm-devel` if you want LTO support (recommend it)
 
 The following instructions all operate based on the environment variables below and from a root directory.
+
+Here's the set of installed binaries on Ubuntu 24.04
+
+    apt-get update -q && \
+        apt-get install -y \
+        cmake \
+        ninja-build \
+        build-essential \
+        clang \
+        llvm-dev \
+        git \
+        python3 \
+        wget \
+        flex \
+        texinfo \
+        file \
+        autoconf \
+        libssl-dev \
+        libz-dev \
+        libtool-bin \
+        && apt-get autoremove -y --purge \
+        && apt-get clean -y \
+        && rm -rf /var/lib/apt/lists/*
 
 ## Environment
 
@@ -50,56 +75,61 @@ The following instructions all operate based on the environment variables below 
 
 **NOTE**: We are using the 10.4 SDK but will need to rebuild crt1.o. This is due to the [issue with 10.4's crt1.o](https://github.com/tpoechtrager/osxcross/issues/50#issuecomment-149013354). 10.5 should theoretically work too.
 
-## dsymutil
+## cctools
 
-Not included as part of cctools, so we'll quickly build llvm 7.1.1, which is the last version with powerpc-apple-darwin8 target support with dsymutil.
+Reference this long discussion [here](https://github.com/tpoechtrager/cctools-port/issues/119) where a lot of people chime in on how to get this all working. Or don't, and just note the final results below, that's cool too.
+
+### dsymutil
+
+Not included as part of the rest of cctools, so we'll quickly build llvm 7.1.1, which is the last version with powerpc-apple-darwin8 target support with dsymutil.
 
 This is easily the longest part of the whole process because apparently we need to build a ton of LLVM before we can build dsymutil...
 
-    mkdir -p llvm-project
-    cd llvm-project
-    git init
-    git remote add origin git@github.com:llvm/llvm-project.git
-    git fetch --depth 1 origin 4856a9330ee01d30e9e11b6c2f991662b4c04b07
-    git checkout FETCH_HEAD
-    cd -
+    mkdir -p $ROOT_DIR/llvm-project && \
+        cd $ROOT_DIR/llvm-project && \
+        git init && \
+        git remote add origin https://github.com/llvm/llvm-project.git && \
+        git fetch --depth 1 origin 4856a9330ee01d30e9e11b6c2f991662b4c04b07 && \
+        git checkout FETCH_HEAD
 
-    mkdir -p build/target/llvm-project
-    cd build/target/llvm-project
-    cmake $ROOT_DIR/llvm-project/llvm \
+    mkdir -p $ROOT_DIR/build/target/llvm-project && \
+    cd $ROOT_DIR/build/target/llvm-project && \
+    CC=clang CXX=clang++ cmake -G Ninja $ROOT_DIR/llvm-project/llvm \
       -DCMAKE_BUILD_TYPE=Release \
       -DLLVM_TARGETS_TO_BUILD="PowerPC" \
-      -DLLVM_ENABLE_ASSERTIONS=OFF
-    make -f tools/dsymutil/Makefile -j dsymutil
-    mkdir -p $TARGET_PREFIX/bin
-    cp bin/dsymutil $TARGET_PREFIX/bin/$TARGET-dsymutil
-    cd -
+      -DLLVM_ENABLE_ASSERTIONS=OFF && \
+    ninja dsymutil && \
+    mkdir -p $TARGET_PREFIX/bin && \
+    cp bin/dsymutil $TARGET_PREFIX/bin/$TARGET-dsymutil && \
+    cd $ROOT_DIR && \
+    rm -rf $ROOT_DIR/build/target/llvm-project && \
+    rm -rf $ROOT_DIR/llvm-project
 
-## cctools
+### ld, as, ar, lipo, nm, ranlib
 
-Thanks to [Wohlstand](https://github.com/tpoechtrager/cctools-port/issues/119#issuecomment-1384868472), we have a fairly recent set of PPC tools. Note that these require clang to build.
+    mkdir -p $ROOT_DIR/cctools-port && \
+    cd $ROOT_DIR/cctools-port && \
+    git init && \
+    git remote add origin https://github.com/tpoechtrager/cctools-port.git && \
+    git fetch --depth 1 origin 6694f27d56923e64e6190c8d3eb149413768e9b7 && \
+    git checkout FETCH_HEAD && \
+    cd cctools && \
+    ./autogen.sh
 
-    mkdir -p cctools-port
-    cd cctools-port
-    git init
-    git remote add origin git@github.com:Wohlstand/cctools-port.git
-    git fetch --depth 1 origin f0ac160455ce815def93194a298c07d78e81f343
-    git checkout FETCH_HEAD
-    cd -
+    mkdir -p $ROOT_DIR/build/target/cctools-port && \
+    cd $ROOT_DIR/build/target/cctools-port && \
+    $ROOT_DIR/cctools-port/cctools/configure CC=clang CXX=clang++ --prefix="$TARGET_PREFIX" --target=$TARGET && \
+    make -j2 && \
+    make install -j && \
+    mkdir -p $TARGET_PREFIX/$TARGET/bin && \
+    for i in ld ar as lipo nm ranlib strip dsymutil; do \
+      ln -s "$TARGET_PREFIX/bin/$TARGET-$i" "$TARGET_PREFIX/$TARGET/bin/$i"; \
+    done && \
+    cd $ROOT_DIR && \
+    rm -rf $ROOT_DIR/build/target/cctools-port && \
+    rm -rf $ROOT_DIR/cctools-port
 
-Also reference: https://github.com/NixOS/nixpkgs/issues/149692, we want to build ld with a larger stack size to avoid issues when generating debug information later (though it isn't a permanent fix, if a 256 MB stack size isn't enough, we'll need to revisit...)
-
-    mkdir -p build/target/cctools-port
-    cd build/target/cctools-port
-    $ROOT_DIR/cctools-port/cctools/configure LDFLAGS="-Wl,-stack_size -Wl,0x10000000" --prefix=$TARGET_PREFIX --target=$TARGET 
-    make -j && \
-    make install -j
-    mkdir -p $TARGET_PREFIX/$TARGET/bin
-    for i in ld ar as lipo nm ranlib strip dsymutil; do
-      ln -s "$TARGET_PREFIX/bin/$TARGET-$i" "$TARGET_PREFIX/$TARGET/bin/$i"
-    done
-    cd -
-
+(Note we also symlink for convenience here)
 
 ## MacOSX SDK
 
@@ -109,7 +139,7 @@ Also reference: https://github.com/NixOS/nixpkgs/issues/149692, we want to build
 We explicitly copy it into the prefix so it should benefit from the `--with-sysroot` option, at least according to the GCC docs:
 `If the specified directory is a subdirectory of ${exec_prefix}, then it will be found relative to the GCC binaries if the installation tree is moved.`
 
-We then also need to extract the ppc binaries out of the universal binaries, allowing us to actually link against them. Note that we don't want to hit the `ppc7400` binaries, since those are for 10.5 and the goal here is just for a Tiger focused SDK.
+We then also need to extract the ppc binaries out of the universal binaries, allowing us to actually link against them without worrying about universal binary support. Note that we don't want to hit the `ppc7400` binaries, since those are for 10.5 and the goal here is just for a Tiger focused SDK.
 
     cd $TARGET_PREFIX/$MAC_SDK_VERSION.sdk/usr/lib
     for i in **/*.dylib **/*.a **/*.o; do
@@ -138,12 +168,18 @@ Some minor modifications to libgcc's dynamic library generation. Since it calls 
 
 ### Just the compiler
 
-    mkdir -p build/target/gcc
-    cd build/target/gcc
-    $ROOT_DIR/gcc/configure --disable-nls --disable-multilib --enable-languages=c,c++,lto --with-dwarf2 --prefix="$TARGET_PREFIX" --target=$TARGET --with-sysroot=$TARGET_PREFIX/$MAC_SDK_VERSION.sdk C{,XX}FLAGS_FOR_TARGET="-O2 -g -mmacosx-version-min=$MACOSX_PPC_DEPLOYMENT_TARGET" LDFLAGS_FOR_TARGET="-O2 -g -mmacosx-version-min=$MACOSX_PPC_DEPLOYMENT_TARGET" --disable-bootstrap && \
-    make all-gcc -j && \
+Note we make some hard-coded configuration settings to avoid gcc making assumptions about as and ld features we don't have. This is also in that GitHub issue discussion linked above.
+
+    mkdir -p $ROOT_DIR/build/target/gcc && \
+    cd $ROOT_DIR/build/target/gcc && \
+    echo "" > config.site-$TARGET && \
+    echo "gcc_cv_as_mmacosx_version_min=no" >> config.site-$TARGET && \
+    echo "gcc_cv_as_darwin_build_version=no" >> config.site-$TARGET && \
+    echo "gcc_cv_ld64_demangle=0" >> config.site-$TARGET && \
+    echo "gcc_cv_ld64_platform_version=0" >> config.site-$TARGET && \
+    CONFIG_SITE=$ROOT_DIR/build/target/gcc/config.site-$TARGET $ROOT_DIR/gcc/configure CC=clang CXX=clang++ --disable-nls --disable-multilib --enable-languages=c,c++,lto --with-dwarf2 --prefix="$TARGET_PREFIX" --target=$TARGET --with-sysroot="$TARGET_PREFIX/$MAC_SDK_VERSION.sdk" CXXFLAGS_FOR_TARGET="-O2 -g -mmacosx-version-min=$MACOSX_PPC_DEPLOYMENT_TARGET" CFLAGS_FOR_TARGET="-O2 -g -mmacosx-version-min=$MACOSX_PPC_DEPLOYMENT_TARGET" LDFLAGS_FOR_TARGET="-O2 -g -mmacosx-version-min=$MACOSX_PPC_DEPLOYMENT_TARGET" --disable-bootstrap && \
+    make all-gcc -j2 && \
     make install-gcc -j
-    cd -
 
 Before we get back to gcc, we need to go rebuild crt1.o as mentioned above.
 
