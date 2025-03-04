@@ -8,6 +8,7 @@ RESOURCES_DIR := $(BASE)/resources
 OUT_DIR := $(BASE)/output
 INT_DIR := $(OUT_DIR)/intermediates
 PUBLISH_DIR := $(OUT_DIR)/publish
+ADDITIONAL_SUBDIRS := $(BASE)/subdirectories
 
 POSTS := $(basename $(wildcard $(POSTS_DIR)/**/post.md))
 TAGS := $(wildcard $(POSTS_DIR)/**/tags.txt)
@@ -44,6 +45,7 @@ site: $(PUBLISHED_POSTS) $(PUBLISHED_RESOURCES) $(TAGS_HTML) $(LATEST_HTML) $(IN
 	if [ "$(CNAME)" != "" ];\
 	then printf "$(CNAME)" > $(PUBLISH_DIR)/CNAME;\
 	fi;
+	cp -r $(ADDITIONAL_SUBDIRS)/* $(PUBLISH_DIR)/
 
 clean:
 	rm -rf $(OUT_DIR)
