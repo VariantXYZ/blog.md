@@ -1,3 +1,6 @@
 [submodule "external/pagedown"]
 	path = external/pagedown
 	url = git@github.com:VariantXYZ/pagedown.git
+[submodule "subdirectories/rompatcher"]
+	path = subdirectories/rompatcher
+	url = git@github.com:VariantXYZ/RomPatcher.js.git
