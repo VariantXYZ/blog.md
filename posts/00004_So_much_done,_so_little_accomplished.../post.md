@@ -43,7 +43,7 @@ Other emulators exist, but they either opt to drop accuracy for speed (so, not g
 
 So, of course, here I am with a pretty unique problem statement and set of resourcees, and I figure... if I've got a C++ 20 compiler and an understanding of the exact workflow I'm trying to build a tool for, maybe I can start writing an emulator with the features I need myself? It would also finally give me an opportunity to play around with C++20 and I could probably spin that as some form of professional development... at least, that's what I told myself.
 
-The project, aptly named [PowerGB](https://github.com/VariantXYZ/PowerGB/tree/add_instructions), is still a work-in-progres. I've been finally getting to the stage of adding instruction parsing after working on it on-and-off after work. If you're wondering why it's taking me so long, it's because I keep finding new things in C++20 that make me interested and I waste days doing things like [writing a comprehensive result wrapper](https://github.com/VariantXYZ/PowerGB/blob/main/src/common/result.hpp) instead of doing actual work.
+The project, aptly named [PowerGB](https://github.com/VariantXYZ/PowerGB/tree/add_instructions), is still a work-in-progress. I've been finally getting to the stage of adding instruction parsing after working on it on-and-off after work. If you're wondering why it's taking me so long, it's because I keep finding new things in C++20 that make me interested and I waste days doing things like [writing a comprehensive result wrapper](https://github.com/VariantXYZ/PowerGB/blob/main/src/common/result.hpp) instead of doing actual work.
 
 Though, to be honest, I'll probably put this on hold because there are other things I'd like to get done...
 
