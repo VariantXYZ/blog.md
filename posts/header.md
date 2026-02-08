@@ -1,4 +1,4 @@
-# Variant's web experience
+# Variant's Little Slice of The Web
 
 <style>
 div.holder {
