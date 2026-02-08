@@ -13,6 +13,7 @@ I'm figuring out how to do horrible things with CSS next, so stay tuned.
 * [My GitHub](https://github.com/VariantXYZ)
 * [This site](https://github.com/VariantXYZ/blog.md)
 * [About me](00001.html)
+* [RSS Feed](rss.xml)
 
 ## Miscellaneous Things
 * RSS Reader: [NetNewsWire](https://netnewswire.com) (it's what I use, at least)
