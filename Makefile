@@ -23,6 +23,7 @@ PUBLISHED_RESOURCES := $(foreach RESOURCE,$(RESOURCES),$(PUBLISH_DIR)/$(notdir $
 TAGS_HTML := $(PUBLISH_DIR)/tags.html
 LATEST_HTML := $(PUBLISH_DIR)/latest.html
 INDEX_HTML := $(PUBLISH_DIR)/index.html
+POSTS_HTML := $(PUBLISH_DIR)/posts.html
 RSS_XML := $(PUBLISH_DIR)/rss.xml
 INTERMEDIATE_RSS_XML := $(foreach POST_NUMBER,$(POST_NUMBERS),$(INT_DIR)/$(POST_NUMBER).xml)
 
@@ -38,10 +39,13 @@ ESCAPE_QUOTES = $(subst $(quote),\$(quote),$(1))
 ESCAPE_DOLLAR = $(subst $(dollar),\$(dollar),$(1))
 ESCAPE_BRACKETS = $(subst $(bracket_left),\$${"{"},$(1)) # Only need to escape one to avoid unintentional interpolation
 ESCAPE_JSC_RAWSTRING = $(subst $(quote),\$(quote),$(subst `,\$${"\`"},$(call ESCAPE_BRACKETS,$(call ESCAPE_DOLLAR,$(1)))))
+REVERSE_LIST = $(if $(1),$(call REVERSE_LIST,$(wordlist 2,$(words $(1)),$(1)))) $(firstword $(1))
+
+POST_LINKS := $(foreach POST,$(POSTS),[$(firstword $(subst $(space),_,$(wordlist 2,99,$(subst _,$(space),$(word 3,$(subst /, ,$(call ESCAPE_QUOTES,$(POST))))))))](./$(word 3, $(subst _, ,$(subst /, ,$(dir $(POST))))]).html))
 
 .SECONDARY:
 .PHONY: site clean new
-site: $(PUBLISHED_POSTS) $(PUBLISHED_RESOURCES) $(TAGS_HTML) $(LATEST_HTML) $(INDEX_HTML) $(RSS_XML)
+site: $(PUBLISHED_POSTS) $(PUBLISHED_RESOURCES) $(TAGS_HTML) $(LATEST_HTML) $(INDEX_HTML) $(POSTS_HTML) $(RSS_XML)
 	if [ "$(CNAME)" != "" ];\
 	then printf "$(CNAME)" > $(PUBLISH_DIR)/CNAME;\
 	fi;
@@ -72,6 +76,10 @@ $(PUBLISH_DIR)/%.html: $(HEADER_HTML) $(INT_DIR)/%.html $(FOOTER_HTML)
 $(LATEST_HTML): $(lastword $(PUBLISHED_POSTS))
 	mkdir -p $(@D)
 	cp $< $@
+
+$(INT_DIR)/posts.md: $(POSTS_DIR)/posts.md $(PUBLISHED_POSTS)
+	cat $< > $@
+	$(foreach POST, $(call REVERSE_LIST,$(POST_LINKS)), printf "* $(subst _,$(space),$(POST))\n" >> $@; )
 
 $(RSS_XML): $(INTERMEDIATE_RSS_XML)
 	mkdir -p $(@D)
@@ -162,5 +170,3 @@ $(INT_DIR)/tags.md: $(POSTS_DIR)/tags.md $(TAGS)
 	$(foreach TAGFILE, $(TAGS), $(foreach TAG, $(shell awk '{ gsub(/ /, "_"); print }' $(call ESCAPE_STRING,$(TAGFILE))), printf "<details><summary>$(call ESCAPE_QUOTES,$(TAG))</summary>\n\n" > $(@D)/tag_$(TAG).md; ))
 	$(foreach TAGFILE, $(TAGS), $(foreach TAG, $(shell awk '{ gsub(/ /, "_"); print }' $(call ESCAPE_STRING,$(TAGFILE))), printf "[$(call ESCAPE_QUOTES,$(wordlist 4,$(words $(filter-out tags.txt,$(subst _, ,$(subst /, ,$(TAGFILE))))), $(subst _, ,$(subst /, ,$(TAGFILE)))))](./$(word 3, $(subst _, ,$(subst /, ,$(TAGFILE)))).html)\n\n" >> $(@D)/tag_$(TAG).md; ))
 	awk 'FNR==1 && NR!=1 && !empty {print "</details>"} {if (NF > 0) empty=0} {print} END {if (NR > 0) print "</details>"}' $(@D)/tag_*.md >> $@
-
-

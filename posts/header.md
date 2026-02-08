@@ -47,6 +47,7 @@ span.sidebar {
 <span class="sidebar">
 <u>Navigation</u>
 [Home](./index.html)
-[Tags](./tags.html)
 [Latest](./latest.html)
+[Posts](./posts.html)
+[Tags](./tags.html)
 </span>
