@@ -31,6 +31,7 @@ div.holder code {
 <span class="sidebar">
 Right Sidebar
 [Home](./index.html)
-[Tags](./tags.html)
 [Latest](./latest.html)
+[Posts](./posts.html)
+[Tags](./tags.html)
 </span>
