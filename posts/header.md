@@ -41,6 +41,9 @@ span.sidebar {
     margin-left: 5px;
     padding-right: 5px;
 }
+span.sidebar a {
+    display: block;
+}
 </style>
 <div class="holder">
 <div class="left-align">
